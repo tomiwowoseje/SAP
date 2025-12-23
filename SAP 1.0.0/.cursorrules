@@ -82,3 +82,15 @@
 
 ## 11. No Modules
 - Don't create extra modules or packages. Keep all files in the same target and project.
+
+## 12. Git / Deployment from Cursor
+- Before every `git commit` and `git push` from Cursor:
+  - Run `git status` and `git diff --stat` to see exactly what changed since the last commit.
+  - Write a commit message that **summarises the real changes**, using this format:
+    - Short title: `Area: high‑level change`
+    - Optional body: bullet list of key edits, e.g. `- HomeView: added motivational greeting`, `- AppState: persisted skills and completions`.
+- Only run:
+  - `git add .`
+  - `git commit -m "<descriptive message>"`
+  - `git push`  
+  **after** you’ve checked the diff and you are happy the message accurately describes what changed since the last push.
