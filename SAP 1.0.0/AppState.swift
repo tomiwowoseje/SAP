@@ -16,6 +16,9 @@ class AppState {
     private let completionsKey = "sap.dailyCompletions"
     private let customCategoriesKey = "sap.customCategories"
     private let completedIdsKey = "sap.completedTaskIds"
+    private let morningRoutineKey = "sap.morningRoutineCompletions"
+    private let memorableMomentsKey = "sap.memorableMoments"
+    private let rolledOverTasksKey = "sap.rolledOverTasks"
     
     // MARK: - Persisted state
     var skills: [Skill] = [
@@ -36,6 +39,21 @@ class AppState {
     // Custom categories
     var customCategories: [SkillCategory] = [] {
         didSet { saveCustomCategories() }
+    }
+    
+    // Morning routine completions [habitId_date: CompletionLevel]
+    var morningRoutineCompletions: [String: CompletionLevel] = [:] {
+        didSet { saveMorningRoutineCompletions() }
+    }
+    
+    // Memorable moments
+    var memorableMoments: [MemorableMoment] = [] {
+        didSet { saveMemorableMoments() }
+    }
+    
+    // Rolled over tasks [skillId: Date] - tasks that need to be shown on next day
+    var rolledOverTasks: [UUID: Date] = [:] {
+        didSet { saveRolledOverTasks() }
     }
     
     // Get all categories (predefined + custom)
@@ -85,6 +103,25 @@ class AppState {
             let todays = dailyCompletions.filter { Calendar.current.isDate($0.date, inSameDayAs: today) && $0.isCompleted }
             completedTaskIds = Set(todays.map { $0.skillId })
         }
+        
+        if let data = defaults.data(forKey: morningRoutineKey),
+           let decoded = try? JSONDecoder().decode([String: CompletionLevel].self, from: data) {
+            morningRoutineCompletions = decoded
+        }
+        
+        if let data = defaults.data(forKey: memorableMomentsKey),
+           let decoded = try? JSONDecoder().decode([MemorableMoment].self, from: data) {
+            memorableMoments = decoded
+        }
+        
+        if let data = defaults.data(forKey: rolledOverTasksKey),
+           let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
+            // Convert [String: Date] to [UUID: Date]
+            rolledOverTasks = decoded.compactMapKeys { UUID(uuidString: $0) }
+        }
+        
+        // Process rolled over tasks on app start
+        processRolledOverTasks()
     }
     
     private func saveSkills() {
@@ -116,6 +153,29 @@ class AppState {
         }
     }
     
+    func saveMorningRoutineCompletions() {
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(morningRoutineCompletions) {
+            UserDefaults.standard.set(data, forKey: morningRoutineKey)
+        }
+    }
+    
+    private func saveMemorableMoments() {
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(memorableMoments) {
+            UserDefaults.standard.set(data, forKey: memorableMomentsKey)
+        }
+    }
+    
+    private func saveRolledOverTasks() {
+        let encoder = JSONEncoder()
+        // Convert [UUID: Date] to [String: Date] for encoding
+        let stringDict = rolledOverTasks.mapKeys { $0.uuidString }
+        if let data = try? encoder.encode(stringDict) {
+            UserDefaults.standard.set(data, forKey: rolledOverTasksKey)
+        }
+    }
+    
     // Track completion for today
     var completedTaskIds: Set<UUID> = [] {
         didSet {
@@ -125,7 +185,7 @@ class AppState {
         }
     }
     
-    // Save today's completions
+    // Save today's completions with partial completion support
     private func saveTodayCompletions() {
         let today = Calendar.current.startOfDay(for: Date())
         
@@ -138,9 +198,109 @@ class AppState {
         // Add completions for all skills for today
         for skill in skills {
             let isCompleted = completedTaskIds.contains(skill.id)
-            let completion = DailyCompletion(skillId: skill.id, date: Date(), isCompleted: isCompleted)
+            // Get completion level from existing completion or default
+            let existingCompletion = dailyCompletions.first { completion in
+                completion.skillId == skill.id && Calendar.current.isDate(completion.date, inSameDayAs: today)
+            }
+            let completionLevel = existingCompletion?.completionLevel ?? (isCompleted ? .full : .none)
+            
+            let completion = DailyCompletion(
+                skillId: skill.id,
+                date: Date(),
+                isCompleted: isCompleted,
+                completionLevel: completionLevel
+            )
             dailyCompletions.append(completion)
         }
+    }
+    
+    // Process rolled over tasks - move incomplete tasks from previous day to today
+    private func processRolledOverTasks() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today) ?? today
+        
+        // Check for tasks that were rolled over from yesterday
+        for (skillId, rolloverDate) in rolledOverTasks {
+            if Calendar.current.isDate(rolloverDate, inSameDayAs: yesterday) {
+                // Task was rolled over from yesterday, ensure it's visible today
+                // The task will appear in the active skills list
+                rolledOverTasks[skillId] = today
+            }
+        }
+        
+        // Clean up old rollovers (older than yesterday)
+        rolledOverTasks = rolledOverTasks.filter { _, date in
+            date >= yesterday
+        }
+        
+        saveRolledOverTasks()
+    }
+    
+    // Roll over a task to the next day
+    func rolloverTask(skillId: UUID) {
+        let today = Calendar.current.startOfDay(for: Date())
+        rolledOverTasks[skillId] = today
+    }
+    
+    // Check if a task should be shown (including rolled over tasks)
+    func shouldShowTask(skillId: UUID, for date: Date = Date()) -> Bool {
+        let targetDate = Calendar.current.startOfDay(for: date)
+        
+        guard let skill = skills.first(where: { $0.id == skillId }) else { return false }
+        
+        // If it's a rolled over task, show it
+        if let rolloverDate = rolledOverTasks[skillId],
+           Calendar.current.isDate(rolloverDate, inSameDayAs: targetDate) {
+            return true
+        }
+        
+        // Otherwise, check if skill is active for this date
+        return skill.isActive(on: targetDate)
+    }
+    
+    // Update completion level for a skill
+    func updateCompletionLevel(skillId: UUID, level: CompletionLevel, for date: Date = Date()) {
+        let targetDate = Calendar.current.startOfDay(for: date)
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        // Update or create daily completion
+        if let index = dailyCompletions.firstIndex(where: { completion in
+            completion.skillId == skillId && Calendar.current.isDate(completion.date, inSameDayAs: targetDate)
+        }) {
+            dailyCompletions[index].completionLevel = level
+            dailyCompletions[index].isCompleted = (level == .full)
+        } else {
+            let completion = DailyCompletion(
+                skillId: skillId,
+                date: targetDate,
+                isCompleted: (level == .full),
+                completionLevel: level
+            )
+            dailyCompletions.append(completion)
+        }
+        
+        // Update completedTaskIds only for today
+        if Calendar.current.isDate(targetDate, inSameDayAs: today) {
+            if level == .full {
+                completedTaskIds.insert(skillId)
+            } else {
+                completedTaskIds.remove(skillId)
+            }
+        }
+        
+        saveDailyCompletions()
+    }
+    
+    // Add memorable moment
+    func addMemorableMoment(_ moment: MemorableMoment) {
+        memorableMoments.append(moment)
+    }
+    
+    // Get memorable moments for a date range
+    func getMemorableMoments(from startDate: Date, to endDate: Date) -> [MemorableMoment] {
+        return memorableMoments.filter { moment in
+            moment.date >= startDate && moment.date <= endDate
+        }.sorted { $0.date > $1.date }
     }
     
     // Manual save method to be called when completions change
@@ -173,13 +333,20 @@ class AppState {
         let skills: [Skill]
         let dailyCompletions: [DailyCompletion]
         let customCategories: [SkillCategory]
+        let morningRoutineCompletions: [String: CompletionLevel]
+        let memorableMoments: [MemorableMoment]
+        let rolledOverTasks: [String: Date]
     }
     
     func exportData() -> String? {
+        let stringDict = rolledOverTasks.mapKeys { $0.uuidString }
         let payload = ExportPayload(
             skills: skills,
             dailyCompletions: dailyCompletions,
-            customCategories: customCategories
+            customCategories: customCategories,
+            morningRoutineCompletions: morningRoutineCompletions,
+            memorableMoments: memorableMoments,
+            rolledOverTasks: stringDict
         )
         
         let encoder = JSONEncoder()
@@ -200,11 +367,37 @@ class AppState {
         skills = payload.skills
         dailyCompletions = payload.dailyCompletions
         customCategories = payload.customCategories
+        morningRoutineCompletions = payload.morningRoutineCompletions
+        memorableMoments = payload.memorableMoments
+        
+        // Convert [String: Date] back to [UUID: Date]
+        rolledOverTasks = payload.rolledOverTasks.compactMapKeys { UUID(uuidString: $0) }
         
         // Rebuild today's completed IDs from imported completions
         let today = Calendar.current.startOfDay(for: Date())
         let todays = dailyCompletions.filter { Calendar.current.isDate($0.date, inSameDayAs: today) && $0.isCompleted }
         completedTaskIds = Set(todays.map { $0.skillId })
+    }
+}
+
+// Helper extension for Dictionary
+extension Dictionary {
+    func mapKeys<T: Hashable>(_ transform: (Key) throws -> T) rethrows -> [T: Value] {
+        var result: [T: Value] = [:]
+        for (key, value) in self {
+            result[try transform(key)] = value
+        }
+        return result
+    }
+    
+    func compactMapKeys<T: Hashable>(_ transform: (Key) throws -> T?) rethrows -> [T: Value] {
+        var result: [T: Value] = [:]
+        for (key, value) in self {
+            if let newKey = try transform(key) {
+                result[newKey] = value
+            }
+        }
+        return result
     }
 }
 

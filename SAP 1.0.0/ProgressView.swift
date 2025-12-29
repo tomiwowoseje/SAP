@@ -243,15 +243,18 @@ struct SkillProgressCard: View {
                     .foregroundColor(.secondary)
             }
             
-            // Streak information
+            // Completion stats (removed streak tracking)
             HStack(spacing: 16) {
-                Label("\(progress.currentStreak) day streak", systemImage: "flame.fill")
-                    .font(.caption)
-                    .foregroundColor(.orange)
+                let fullCompletions = progress.completions.filter { $0.completionLevel == .full }.count
+                let partialCompletions = progress.completions.filter { $0.completionLevel == .partial }.count
                 
-                Label("Longest: \(progress.longestStreak)", systemImage: "star.fill")
+                Label("\(fullCompletions) full", systemImage: "checkmark.circle.fill")
                     .font(.caption)
-                    .foregroundColor(.yellow)
+                    .foregroundColor(.green)
+                
+                Label("\(partialCompletions) partial", systemImage: "circle.fill")
+                    .font(.caption)
+                    .foregroundColor(.blue)
             }
             
             // Heatmap grid
@@ -266,26 +269,76 @@ struct SkillProgressCard: View {
     // Heatmap grid based on view type
     private var heatmapGrid: some View {
         let dates = getDatesForViewType()
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: getColumnCount())
+        let columns = Array(repeating: GridItem(.flexible(), spacing: viewType == .monthly ? 2 : 4), count: getColumnCount())
+        let calendar = Calendar.current
+        let currentMonth = calendar.component(.month, from: Date())
+        let currentYear = calendar.component(.year, from: Date())
         
-        return LazyVGrid(columns: columns, spacing: 4) {
-            ForEach(dates, id: \.self) { date in
-                let completion = progress.completions.first { completion in
-                    Calendar.current.isDate(completion.date, inSameDayAs: date)
+        return Group {
+            if viewType == .monthly {
+                // Full calendar view for monthly
+                VStack(spacing: 4) {
+                    // Day headers
+                    HStack(spacing: 2) {
+                        ForEach(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"], id: \.self) { day in
+                            Text(day)
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    
+                    // Calendar grid
+                    LazyVGrid(columns: columns, spacing: 2) {
+                        ForEach(Array(dates.enumerated()), id: \.element) { index, date in
+                            let completion = progress.completions.first { completion in
+                                calendar.isDate(completion.date, inSameDayAs: date)
+                            }
+                            
+                            let completionLevel = completion?.completionLevel ?? .none
+                            let isInCurrentMonth = calendar.component(.month, from: date) == currentMonth &&
+                                                   calendar.component(.year, from: date) == currentYear
+                            
+                            let prevCompletion = index > 0 ? progress.completions.first { calendar.isDate($0.date, inSameDayAs: dates[index - 1]) } : nil
+                            let nextCompletion = index < dates.count - 1 ? progress.completions.first { calendar.isDate($0.date, inSameDayAs: dates[index + 1]) } : nil
+                            
+                            CalendarDayCellView(
+                                date: date,
+                                completions: completion != nil ? [completion!] : [],
+                                isToday: calendar.isDate(date, inSameDayAs: Date()),
+                                isInCurrentMonth: isInCurrentMonth,
+                                previousDate: index > 0 ? dates[index - 1] : nil,
+                                nextDate: index < dates.count - 1 ? dates[index + 1] : nil,
+                                previousCompletions: prevCompletion != nil ? [prevCompletion!] : [],
+                                nextCompletions: nextCompletion != nil ? [nextCompletion!] : []
+                            )
+                        }
+                    }
                 }
-                
-                let isCompleted = completion?.isCompleted ?? false
-                let color = getColorForCompletion(isCompleted: isCompleted, date: date)
-                
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(color)
-                    .frame(height: 20)
-                    .overlay(
-                        Text("\(Calendar.current.component(.day, from: date))")
-                            .font(.system(size: 8))
-                            .foregroundColor(isCompleted ? .white : .secondary)
-                            .opacity(Calendar.current.isDate(date, inSameDayAs: Date()) ? 1 : 0.6)
-                    )
+            } else {
+                // Simple grid for weekly/annual
+                LazyVGrid(columns: columns, spacing: 4) {
+                    ForEach(dates, id: \.self) { date in
+                        let completion = progress.completions.first { completion in
+                            calendar.isDate(completion.date, inSameDayAs: date)
+                        }
+                        
+                        let completionLevel = completion?.completionLevel ?? .none
+                        let isCompleted = completion?.isCompleted ?? false
+                        let color = getColorForCompletion(isCompleted: isCompleted, date: date)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(color)
+                            .frame(height: 20)
+                            .overlay(
+                                Text("\(calendar.component(.day, from: date))")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(completionLevel == .full ? .white : (completionLevel == .partial ? .black.opacity(0.6) : .secondary))
+                                    .opacity(calendar.isDate(date, inSameDayAs: Date()) ? 1 : 0.6)
+                            )
+                    }
+                }
             }
         }
     }
@@ -302,8 +355,19 @@ struct SkillProgressCard: View {
             dates = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: startDate) }
             
         case .monthly:
-            let startDate = calendar.date(byAdding: .day, value: -29, to: now) ?? now
-            dates = (0..<30).compactMap { calendar.date(byAdding: .day, value: $0, to: startDate) }
+            // Show full calendar month view
+            let components = calendar.dateComponents([.year, .month], from: now)
+            guard let monthStart = calendar.date(from: components) else {
+                let startDate = calendar.date(byAdding: .day, value: -29, to: now) ?? now
+                return (0..<30).compactMap { calendar.date(byAdding: .day, value: $0, to: startDate) }
+            }
+            
+            let firstWeekday = calendar.component(.weekday, from: monthStart)
+            let daysFromMonday = (firstWeekday + 5) % 7
+            let calendarStart = calendar.date(byAdding: .day, value: -daysFromMonday, to: monthStart) ?? monthStart
+            
+            // Show 6 weeks (42 days) to fill the grid
+            dates = (0..<42).compactMap { calendar.date(byAdding: .day, value: $0, to: calendarStart) }
             
         case .annual:
             // Show last 12 months, one representative day per month (first day)
@@ -323,25 +387,47 @@ struct SkillProgressCard: View {
     private func getColumnCount() -> Int {
         switch viewType {
         case .weekly: return 7
-        case .monthly: return 7 // 5 rows of 7 days
+        case .monthly: return 7 // 6 rows of 7 days (full calendar month)
         case .annual: return 6 // 2 rows of 6 months
         }
     }
     
-    // Get color for completion state (B-005: Color-code completion states)
+    // Get color for completion state with Git-style color coding (light = partial, dark = full)
     private func getColorForCompletion(isCompleted: Bool, date: Date) -> Color {
-        if Calendar.current.isDate(date, inSameDayAs: Date()) {
-            // Today - highlight
-            return isCompleted ? .green.opacity(0.8) : .gray.opacity(0.3)
-        } else if date > Date() {
+        let completion = progress.completions.first { completion in
+            Calendar.current.isDate(completion.date, inSameDayAs: date)
+        }
+        
+        let completionLevel = completion?.completionLevel ?? .none
+        let isToday = Calendar.current.isDate(date, inSameDayAs: Date())
+        
+        if date > Date() {
             // Future dates
             return .clear
-        } else {
-            // Past dates
-            if isCompleted {
-                return .green.opacity(0.6)
+        }
+        
+        // Git-style color coding: light = partial, dark = full, gray = none
+        switch completionLevel {
+        case .full:
+            // Dark color for full completion
+            if isToday {
+                return Color(red: 0.2, green: 0.6, blue: 0.3) // Dark green for today
             } else {
-                return .red.opacity(0.3) // Missed
+                return Color(red: 0.1, green: 0.5, blue: 0.2) // Darker green for past
+            }
+        case .partial:
+            // Light color for partial completion
+            if isToday {
+                return Color(red: 0.6, green: 0.8, blue: 0.6) // Light green for today
+            } else {
+                return Color(red: 0.5, green: 0.7, blue: 0.5) // Lighter green for past
+            }
+        case .none:
+            // Gray for no completion
+            if isToday {
+                return Color.gray.opacity(0.3)
+            } else {
+                return Color.gray.opacity(0.2)
             }
         }
     }

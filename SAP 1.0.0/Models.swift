@@ -8,6 +8,13 @@
 import Foundation
 import SwiftUI
 
+// Completion level enum for partial completion tracking
+enum CompletionLevel: String, Codable {
+    case none
+    case partial
+    case full
+}
+
 // Skill Category with custom name support
 struct SkillCategory: Identifiable, Hashable, Codable {
     let id: String
@@ -246,29 +253,76 @@ struct Skill: Identifiable, Hashable, Codable {
     var isArchived: Bool {
         !isActive(on: Date())
     }
+    
+    // Support for task rollover
+    var allowsRollover: Bool = false
 }
 
-// Task model
+// Memorable moment for tracking special achievements
+struct MemorableMoment: Identifiable, Codable {
+    let id: UUID
+    let skillId: UUID?
+    let date: Date
+    let title: String
+    let description: String
+    let category: MomentCategory
+    
+    enum MomentCategory: String, Codable {
+        case achievement = "Achievement"
+        case milestone = "Milestone"
+        case breakthrough = "Breakthrough"
+        case personal = "Personal"
+    }
+    
+    init(id: UUID = UUID(), skillId: UUID? = nil, date: Date = Date(), title: String, description: String, category: MomentCategory) {
+        self.id = id
+        self.skillId = skillId
+        self.date = date
+        self.title = title
+        self.description = description
+        self.category = category
+    }
+}
+
+// Task model with rollover support
 struct Task: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID
     let name: String
     let skillName: String
     var isCompleted: Bool = false
+    var completionLevel: CompletionLevel = .none
     let skillId: UUID
     let category: SkillCategory
+    var canRollover: Bool = false // Allow task to rollover to next day
+    var rolledOverFrom: Date? // Date this task was rolled over from
+    
+    init(id: UUID = UUID(), name: String, skillName: String, isCompleted: Bool = false, completionLevel: CompletionLevel = .none, skillId: UUID, category: SkillCategory, canRollover: Bool = false, rolledOverFrom: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.skillName = skillName
+        self.isCompleted = isCompleted
+        self.completionLevel = completionLevel
+        self.skillId = skillId
+        self.category = category
+        self.canRollover = canRollover
+        self.rolledOverFrom = rolledOverFrom
+    }
 }
 
-// Daily completion record for progress tracking
+// Daily completion record for progress tracking with partial completion support
 struct DailyCompletion: Identifiable, Hashable, Codable {
-    let id = UUID()
+    let id: UUID
     let skillId: UUID
     let date: Date
-    let isCompleted: Bool
+    var isCompleted: Bool
+    var completionLevel: CompletionLevel // none, partial, full
     
-    init(skillId: UUID, date: Date, isCompleted: Bool) {
+    init(id: UUID = UUID(), skillId: UUID, date: Date, isCompleted: Bool, completionLevel: CompletionLevel = .none) {
+        self.id = id
         self.skillId = skillId
         self.date = Calendar.current.startOfDay(for: date)
         self.isCompleted = isCompleted
+        self.completionLevel = completionLevel
     }
 }
 

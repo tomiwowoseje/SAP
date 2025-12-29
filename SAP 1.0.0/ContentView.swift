@@ -12,6 +12,7 @@ struct HomeView: View {
     
     @State private var showAddSkill = false
     @State private var skillToEdit: Skill?
+    @State private var selectedDate: Date = Date()
     
     // B-001: Time-based greeting
     private var timeBasedGreeting: String {
@@ -55,44 +56,59 @@ struct HomeView: View {
         return Dictionary(grouping: tasks) { $0.category }
     }
     
-    // Calculate streak metrics (B-005 related)
-    private var streakMetrics: (currentStreak: Int, tasksDone: Int, mastered: Int, completionPercentage: Double) {
-        let allProgress = appState.getAllProgress()
+    // Get tasks for selected date (including rolled over tasks)
+    private var tasksForSelectedDate: [Task] {
+        let targetDate = Calendar.current.startOfDay(for: selectedDate)
+        let isToday = Calendar.current.isDate(selectedDate, inSameDayAs: Date())
         
-        // Get the highest current streak from all skills
-        let currentStreak = allProgress.map { $0.currentStreak }.max() ?? 0
-        
-        // Total tasks done (today's completed tasks)
-        let tasksDone = appState.completedTaskIds.count
-        
-        // Skills with high completion percentage (mastered)
-        let mastered = allProgress.filter { $0.completionPercentage >= 80 }.count
-        
-        // Overall completion percentage (total completed vs total skills)
-        let totalSkills = appState.skills.count
-        let completionPercentage = totalSkills > 0 ? (Double(tasksDone) / Double(totalSkills)) * 100 : 0
-        
-        return (currentStreak, tasksDone, mastered, completionPercentage)
+        return appState.skills.compactMap { skill in
+            // Check if task should be shown (active or rolled over)
+            let shouldShow = isToday ? 
+                (appState.activeSkills.contains { $0.id == skill.id } || appState.rolledOverTasks[skill.id] != nil) :
+                skill.isActive(on: targetDate)
+            
+            guard shouldShow else { return nil }
+            
+            // Get completion level for this date
+            let completion = appState.dailyCompletions.first { completion in
+                completion.skillId == skill.id && Calendar.current.isDate(completion.date, inSameDayAs: targetDate)
+            }
+            
+            let isCompleted = completion?.isCompleted ?? false
+            let completionLevel = completion?.completionLevel ?? .none
+            let isRolledOver = appState.rolledOverTasks[skill.id] != nil
+            
+            return Task(
+                name: skill.taskDescription,
+                skillName: skill.name,
+                isCompleted: isCompleted,
+                completionLevel: completionLevel,
+                skillId: skill.id,
+                category: skill.category,
+                canRollover: skill.allowsRollover,
+                rolledOverFrom: isRolledOver ? appState.rolledOverTasks[skill.id] : nil
+            )
+        }
     }
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Top bar with logo and user info
+                    // Top bar with logo
                     topBar
                     
                     // Header section with greeting
                     headerSection
                     
-                    // Search bar
-                    searchBar
+                    // Interactive Week Calendar
+                    InteractiveCalendarView(selectedDate: $selectedDate)
                     
-                    // Today's Tasks Section
-                    todaysTasksSection
+                    // Morning Routine Section
+                    MorningRoutineView(appState: appState)
                     
-                    // Your Streaks Section (using B-005 metrics)
-                    streaksSection()
+                    // Tasks Section for selected date
+                    tasksSection
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 100) // Space for bottom navigation
@@ -122,13 +138,13 @@ struct HomeView: View {
         }
     }
     
-    // Top bar with logo and user icon
+    // Top bar with logo (removed login and notifications buttons)
     private var topBar: some View {
         HStack {
             // Logo
             HStack(spacing: 8) {
                 Image(systemName: "chart.bar.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(Color(red: 0.6, green: 0.4, blue: 0.9))
                     .font(.title3)
                 Text("SkillTrack")
                     .font(.title2)
@@ -136,25 +152,6 @@ struct HomeView: View {
             }
             
             Spacer()
-            
-            // Notification and user icons
-            HStack(spacing: 16) {
-                Button(action: {}) {
-                    Image(systemName: "bell")
-                        .font(.title3)
-                }
-                
-                Button(action: {}) {
-                    Circle()
-                        .fill(Color.blue.opacity(0.3))
-                        .frame(width: 32, height: 32)
-                        .overlay(
-                            Text("U")
-                                .font(.headline)
-                                .foregroundColor(.blue)
-                        )
-                }
-            }
         }
         .padding(.top)
     }
@@ -172,33 +169,35 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     
-    // Search bar
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-            Text("Search skills...")
-                .foregroundColor(.secondary)
-            Spacer()
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-    }
-    
-    // Today's Tasks Section
-    private var todaysTasksSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Today's Tasks")
-                .font(.title2)
-                .fontWeight(.bold)
+    // Tasks Section for selected date
+    private var tasksSection: some View {
+        let isToday = Calendar.current.isDate(selectedDate, inSameDayAs: Date())
+        let sectionTitle = isToday ? "Today's Tasks" : dateFormatter.string(from: selectedDate)
+        
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(sectionTitle)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                // Quick add button
+                Button(action: {
+                    showAddSkill = true
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(Color(red: 0.6, green: 0.4, blue: 0.9))
+                }
+            }
             
-            if appState.activeSkills.isEmpty {
+            if tasksForSelectedDate.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "checklist")
                         .font(.system(size: 60))
                         .foregroundColor(.secondary)
-                    Text("No tasks for today")
+                    Text("No tasks for this day")
                         .font(.headline)
                         .foregroundColor(.secondary)
                     Text("Add a skill to get started")
@@ -209,23 +208,23 @@ struct HomeView: View {
                 .padding(.vertical, 40)
             } else {
                 VStack(spacing: 12) {
-                    ForEach(appState.activeSkills) { skill in
+                    ForEach(tasksForSelectedDate) { task in
                         TaskCardView(
-                            task: Task(
-                                name: skill.taskDescription,
-                                skillName: skill.name,
-                                isCompleted: appState.completedTaskIds.contains(skill.id),
-                                skillId: skill.id,
-                                category: skill.category
-                            ),
+                            task: task,
                             onToggle: {
-                                toggleTaskCompletion(for: skill.id)
+                                toggleTaskCompletion(for: task.skillId)
+                            },
+                            onPartialComplete: {
+                                togglePartialCompletion(for: task.skillId)
+                            },
+                            onRollover: {
+                                rolloverTask(task.skillId)
                             },
                             onEdit: {
-                                editSkill(withId: skill.id)
+                                editSkill(withId: task.skillId)
                             },
                             onDelete: {
-                                deleteSkill(withId: skill.id)
+                                deleteSkill(withId: task.skillId)
                             }
                         )
                     }
@@ -234,59 +233,35 @@ struct HomeView: View {
         }
     }
     
-    // Your Streaks Section
-    private func streaksSection() -> some View {
-        let metrics = streakMetrics
-        
-        return VStack(alignment: .leading, spacing: 16) {
-            Text("Your Streaks")
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
-                StreakCardView(
-                    icon: "flame.fill",
-                    iconColor: .orange,
-                    value: "\(metrics.currentStreak)",
-                    label: "Day Streak"
-                )
-                
-                StreakCardView(
-                    icon: "checkmark.circle.fill",
-                    iconColor: .green,
-                    value: "\(metrics.tasksDone)",
-                    label: "Tasks Done"
-                )
-                
-                StreakCardView(
-                    icon: "trophy.fill",
-                    iconColor: .purple,
-                    value: "\(metrics.mastered)",
-                    label: "Mastered"
-                )
-                
-                StreakCardView(
-                    icon: "star.fill",
-                    iconColor: .pink,
-                    value: String(format: "%.0f%%", metrics.completionPercentage),
-                    label: "Completion"
-                )
-            }
-        }
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
     }
     
-    // Task completion mechanism
+    // Task completion mechanism with partial completion support
     private func toggleTaskCompletion(for skillId: UUID) {
-        if appState.completedTaskIds.contains(skillId) {
-            appState.completedTaskIds.remove(skillId)
-        } else {
-            appState.completedTaskIds.insert(skillId)
-        }
-        // Ensure completions are saved
-        appState.saveCompletions()
+        let currentLevel = appState.dailyCompletions.first { completion in
+            completion.skillId == skillId && Calendar.current.isDate(completion.date, inSameDayAs: selectedDate)
+        }?.completionLevel ?? .none
+        
+        let newLevel: CompletionLevel = currentLevel == .full ? .none : .full
+        appState.updateCompletionLevel(skillId: skillId, level: newLevel, for: selectedDate)
+    }
+    
+    // Toggle partial completion
+    private func togglePartialCompletion(for skillId: UUID) {
+        let currentLevel = appState.dailyCompletions.first { completion in
+            completion.skillId == skillId && Calendar.current.isDate(completion.date, inSameDayAs: selectedDate)
+        }?.completionLevel ?? .none
+        
+        let newLevel: CompletionLevel = currentLevel == .partial ? .none : .partial
+        appState.updateCompletionLevel(skillId: skillId, level: newLevel, for: selectedDate)
+    }
+    
+    // Rollover task to next day
+    private func rolloverTask(_ skillId: UUID) {
+        appState.rolloverTask(skillId: skillId)
     }
     
     // B-003: Add new skill
@@ -326,38 +301,70 @@ struct ContentView: View {
     }
 }
 
-// Task Card View matching design
+// Task Card View with partial completion and rollover support
 struct TaskCardView: View {
     let task: Task
     let onToggle: () -> Void
+    let onPartialComplete: () -> Void
+    let onRollover: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
+    
+    private var completionColor: Color {
+        switch task.completionLevel {
+        case .full:
+            return task.category.color
+        case .partial:
+            return task.category.color.opacity(0.5)
+        case .none:
+            return Color.gray.opacity(0.3)
+        }
+    }
+    
+    private var progressWidth: CGFloat {
+        switch task.completionLevel {
+        case .full:
+            return 1.0
+        case .partial:
+            return 0.5
+        case .none:
+            return 0.0
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
             // Category icon (colored square)
             RoundedRectangle(cornerRadius: 8)
-                .fill(task.category.color.opacity(0.2))
+                .fill(task.category.color.opacity(task.completionLevel == .full ? 0.3 : 0.2))
                 .frame(width: 40, height: 40)
                 .overlay(
                     Image(systemName: task.category.icon)
-                        .foregroundColor(task.category.color)
+                        .foregroundColor(task.completionLevel == .full ? task.category.color : task.category.color.opacity(0.7))
                         .font(.system(size: 20))
                 )
             
             // Task info
             VStack(alignment: .leading, spacing: 6) {
-                Text(task.name)
-                    .font(.body)
-                    .fontWeight(.medium)
-                    .strikethrough(task.isCompleted)
-                    .foregroundColor(task.isCompleted ? .secondary : .primary)
+                HStack {
+                    Text(task.name)
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .strikethrough(task.completionLevel == .full)
+                        .foregroundColor(task.completionLevel == .full ? .secondary : .primary)
+                    
+                    if task.rolledOverFrom != nil {
+                        Image(systemName: "arrow.forward.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
                 
                 Text(task.category.name)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                // Progress bar
+                // Progress bar with partial completion
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Rectangle()
@@ -366,10 +373,10 @@ struct TaskCardView: View {
                             .cornerRadius(2)
                         
                         Rectangle()
-                            .fill(task.isCompleted ? Color.green : task.category.color)
-                            .frame(width: task.isCompleted ? geometry.size.width : 0, height: 4)
+                            .fill(completionColor)
+                            .frame(width: geometry.size.width * progressWidth, height: 4)
                             .cornerRadius(2)
-                            .animation(.linear, value: task.isCompleted)
+                            .animation(.linear, value: task.completionLevel)
                     }
                 }
                 .frame(height: 4)
@@ -377,28 +384,67 @@ struct TaskCardView: View {
             
             Spacer()
             
-            // Completion indicator and checkbox
-            VStack(spacing: 4) {
-                Text(task.isCompleted ? "1/1" : "0/1")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            // Completion controls
+            VStack(spacing: 8) {
+                // Completion status
+                HStack(spacing: 4) {
+                    if task.completionLevel == .partial {
+                        Circle()
+                            .fill(task.category.color.opacity(0.5))
+                            .frame(width: 8, height: 8)
+                    } else if task.completionLevel == .full {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(task.category.color)
+                            .font(.caption)
+                    }
+                }
                 
-                Button(action: {
-                    onToggle()
-                }) {
-                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundColor(task.isCompleted ? .green : .gray)
+                // Action buttons
+                HStack(spacing: 8) {
+                    // Partial completion button
+                    Button(action: onPartialComplete) {
+                        Image(systemName: task.completionLevel == .partial ? "circle.fill" : "circle")
+                            .font(.caption)
+                            .foregroundColor(task.completionLevel == .partial ? task.category.color.opacity(0.7) : .gray)
+                    }
+                    
+                    // Full completion button
+                    Button(action: onToggle) {
+                        Image(systemName: task.completionLevel == .full ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundColor(task.completionLevel == .full ? task.category.color : .gray)
+                    }
+                }
+                
+                // Rollover button (if enabled)
+                if task.canRollover {
+                    Button(action: onRollover) {
+                        Image(systemName: "arrow.right.circle")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
                 }
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(task.completionLevel == .full ? task.category.color.opacity(0.05) : Color(.systemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(task.completionLevel == .full ? task.category.color.opacity(0.2) : Color.clear, lineWidth: 1)
+                )
+        )
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         .contextMenu {
             Button(action: onEdit) {
                 Label("Edit", systemImage: "pencil")
+            }
+            
+            if task.canRollover {
+                Button(action: onRollover) {
+                    Label("Rollover to tomorrow", systemImage: "arrow.right.circle")
+                }
             }
             
             Button(role: .destructive, action: onDelete) {
@@ -408,34 +454,6 @@ struct TaskCardView: View {
     }
 }
 
-// Streak Card View
-struct StreakCardView: View {
-    let icon: String
-    let iconColor: Color
-    let value: String
-    let label: String
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(iconColor)
-            
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-    }
-}
 
 #Preview {
     ContentView()
