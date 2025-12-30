@@ -171,7 +171,8 @@ struct HomeView: View {
     
     // Tasks Section for selected date
     private var tasksSection: some View {
-        let isToday = Calendar.current.isDate(selectedDate, inSameDayAs: Date())
+        let calendar = Calendar.current
+        let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
         let sectionTitle = isToday ? "Today's Tasks" : dateFormatter.string(from: selectedDate)
         
         return VStack(alignment: .leading, spacing: 16) {
@@ -215,7 +216,8 @@ struct HomeView: View {
                                 toggleTaskCompletion(for: task.skillId)
                             },
                             onPartialComplete: {
-                                togglePartialCompletion(for: task.skillId)
+                                // No longer used - same as toggle
+                                toggleTaskCompletion(for: task.skillId)
                             },
                             onRollover: {
                                 rolloverTask(task.skillId)
@@ -239,24 +241,21 @@ struct HomeView: View {
         return formatter
     }
     
-    // Task completion mechanism with partial completion support
+    // Task completion mechanism - simple toggle between done and not done
     private func toggleTaskCompletion(for skillId: UUID) {
         let currentLevel = appState.dailyCompletions.first { completion in
             completion.skillId == skillId && Calendar.current.isDate(completion.date, inSameDayAs: selectedDate)
         }?.completionLevel ?? .none
         
+        // Simple toggle: none <-> full (no partial)
         let newLevel: CompletionLevel = currentLevel == .full ? .none : .full
         appState.updateCompletionLevel(skillId: skillId, level: newLevel, for: selectedDate)
     }
     
-    // Toggle partial completion
+    // Toggle partial completion (no longer used, kept for compatibility)
     private func togglePartialCompletion(for skillId: UUID) {
-        let currentLevel = appState.dailyCompletions.first { completion in
-            completion.skillId == skillId && Calendar.current.isDate(completion.date, inSameDayAs: selectedDate)
-        }?.completionLevel ?? .none
-        
-        let newLevel: CompletionLevel = currentLevel == .partial ? .none : .partial
-        appState.updateCompletionLevel(skillId: skillId, level: newLevel, for: selectedDate)
+        // Same as toggle - no partial completion
+        toggleTaskCompletion(for: skillId)
     }
     
     // Rollover task to next day
@@ -301,7 +300,7 @@ struct ContentView: View {
     }
 }
 
-// Task Card View with partial completion and rollover support
+// Task Card View - simplified with single checkbox
 struct TaskCardView: View {
     let task: Task
     let onToggle: () -> Void
@@ -310,37 +309,19 @@ struct TaskCardView: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     
-    private var completionColor: Color {
-        switch task.completionLevel {
-        case .full:
-            return task.category.color
-        case .partial:
-            return task.category.color.opacity(0.5)
-        case .none:
-            return Color.gray.opacity(0.3)
-        }
-    }
-    
-    private var progressWidth: CGFloat {
-        switch task.completionLevel {
-        case .full:
-            return 1.0
-        case .partial:
-            return 0.5
-        case .none:
-            return 0.0
-        }
+    private var isCompleted: Bool {
+        task.completionLevel == .full
     }
     
     var body: some View {
         HStack(spacing: 12) {
             // Category icon (colored square)
             RoundedRectangle(cornerRadius: 8)
-                .fill(task.category.color.opacity(task.completionLevel == .full ? 0.3 : 0.2))
+                .fill(task.category.color.opacity(isCompleted ? 0.3 : 0.2))
                 .frame(width: 40, height: 40)
                 .overlay(
                     Image(systemName: task.category.icon)
-                        .foregroundColor(task.completionLevel == .full ? task.category.color : task.category.color.opacity(0.7))
+                        .foregroundColor(isCompleted ? task.category.color : task.category.color.opacity(0.7))
                         .font(.system(size: 20))
                 )
             
@@ -350,8 +331,7 @@ struct TaskCardView: View {
                     Text(task.name)
                         .font(.body)
                         .fontWeight(.medium)
-                        .strikethrough(task.completionLevel == .full)
-                        .foregroundColor(task.completionLevel == .full ? .secondary : .primary)
+                        .foregroundColor(isCompleted ? .secondary : .primary)
                     
                     if task.rolledOverFrom != nil {
                         Image(systemName: "arrow.forward.circle.fill")
@@ -364,7 +344,7 @@ struct TaskCardView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                // Progress bar with partial completion
+                // Progress bar
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Rectangle()
@@ -373,10 +353,10 @@ struct TaskCardView: View {
                             .cornerRadius(2)
                         
                         Rectangle()
-                            .fill(completionColor)
-                            .frame(width: geometry.size.width * progressWidth, height: 4)
+                            .fill(isCompleted ? task.category.color : Color.gray.opacity(0.3))
+                            .frame(width: isCompleted ? geometry.size.width : 0, height: 4)
                             .cornerRadius(2)
-                            .animation(.linear, value: task.completionLevel)
+                            .animation(.linear, value: isCompleted)
                     }
                 }
                 .frame(height: 4)
@@ -384,55 +364,20 @@ struct TaskCardView: View {
             
             Spacer()
             
-            // Completion controls
-            VStack(spacing: 8) {
-                // Completion status
-                HStack(spacing: 4) {
-                    if task.completionLevel == .partial {
-                        Circle()
-                            .fill(task.category.color.opacity(0.5))
-                            .frame(width: 8, height: 8)
-                    } else if task.completionLevel == .full {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(task.category.color)
-                            .font(.caption)
-                    }
-                }
-                
-                // Action buttons
-                HStack(spacing: 8) {
-                    // Partial completion button
-                    Button(action: onPartialComplete) {
-                        Image(systemName: task.completionLevel == .partial ? "circle.fill" : "circle")
-                            .font(.caption)
-                            .foregroundColor(task.completionLevel == .partial ? task.category.color.opacity(0.7) : .gray)
-                    }
-                    
-                    // Full completion button
-                    Button(action: onToggle) {
-                        Image(systemName: task.completionLevel == .full ? "checkmark.circle.fill" : "circle")
-                            .font(.title3)
-                            .foregroundColor(task.completionLevel == .full ? task.category.color : .gray)
-                    }
-                }
-                
-                // Rollover button (if enabled)
-                if task.canRollover {
-                    Button(action: onRollover) {
-                        Image(systemName: "arrow.right.circle")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
-                }
+            // Single checkbox - one click to toggle
+            Button(action: onToggle) {
+                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundColor(isCompleted ? task.category.color : .gray)
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(task.completionLevel == .full ? task.category.color.opacity(0.05) : Color(.systemBackground))
+                .fill(isCompleted ? task.category.color.opacity(0.1) : Color(.systemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(task.completionLevel == .full ? task.category.color.opacity(0.2) : Color.clear, lineWidth: 1)
+                        .stroke(isCompleted ? task.category.color.opacity(0.3) : Color.clear, lineWidth: 1)
                 )
         )
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)

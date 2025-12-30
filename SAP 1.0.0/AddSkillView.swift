@@ -24,10 +24,6 @@ struct AddSkillView: View {
     @State private var dailyGoal: String = ""
     @State private var weeklyGoal: String = ""
     
-    // B-004: Custom category creation
-    @State private var showCustomCategorySheet = false
-    @State private var customCategoryName: String = ""
-    
     @State private var errorMessage: String = ""
     @State private var showError: Bool = false
     
@@ -59,32 +55,6 @@ struct AddSkillView: View {
                             Text("e.g., Practice for 30 minutes")
                                 .foregroundColor(.secondary)
                         }
-                }
-                
-                // B-003 & B-004: Category Selection with custom category support
-                Section(header: Text("Category")) {
-                    Picker("Category", selection: $selectedCategory) {
-                        // Predefined categories
-                        ForEach(appState.allCategories) { category in
-                            HStack {
-                                Image(systemName: category.icon)
-                                    .foregroundColor(category.color)
-                                Text(category.name)
-                            }
-                            .tag(category)
-                        }
-                    }
-                    
-                    // B-004: Button to create custom category
-                    Button(action: {
-                        showCustomCategorySheet = true
-                    }) {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                            Text("Create Custom Category")
-                        }
-                        .foregroundColor(.blue)
-                    }
                 }
                 
                 // B-003: Frequency Options
@@ -155,12 +125,6 @@ struct AddSkillView: View {
                         saveSkill()
                     }
                     .disabled(!isFormValid)
-                }
-            }
-            .sheet(isPresented: $showCustomCategorySheet) {
-                CustomCategoryView(appState: appState) { newCategory in
-                    selectedCategory = newCategory
-                    showCustomCategorySheet = false
                 }
             }
         }
@@ -256,108 +220,6 @@ extension View {
             placeholder().opacity(shouldShow ? 1 : 0)
             self
         }
-    }
-}
-
-// B-004: Custom Category Creation View
-struct CustomCategoryView: View {
-    @Environment(\.dismiss) var dismiss
-    @Bindable var appState: AppState
-    
-    @State private var categoryName: String = ""
-    @State private var selectedIcon: String = "tag.fill"
-    @State private var selectedColorName: String = "gray"
-    
-    let icons = ["tag.fill", "star.fill", "heart.fill", "book.fill", "music.note", "pencil", "camera.fill", "gamecontroller.fill"]
-    let colors: [(name: String, color: Color)] = [
-        ("blue", .blue),
-        ("red", .red),
-        ("purple", .purple),
-        ("orange", .orange),
-        ("pink", .pink),
-        ("green", .green),
-        ("mint", .mint),
-        ("gray", .gray)
-    ]
-    
-    var onSave: (SkillCategory) -> Void
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("Category Name")) {
-                    TextField("Category Name", text: $categoryName)
-                        .textInputAutocapitalization(.words)
-                }
-                
-                Section(header: Text("Icon")) {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-                        ForEach(icons, id: \.self) { icon in
-                            Button(action: {
-                                selectedIcon = icon
-                            }) {
-                                Image(systemName: icon)
-                                    .font(.title2)
-                                    .foregroundColor(selectedIcon == icon ? .blue : .gray)
-                                    .frame(width: 50, height: 50)
-                                    .background(selectedIcon == icon ? Color.blue.opacity(0.1) : Color.clear)
-                                    .cornerRadius(8)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 8)
-                }
-                
-                Section(header: Text("Color")) {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-                        ForEach(colors, id: \.name) { colorItem in
-                            Button(action: {
-                                selectedColorName = colorItem.name
-                            }) {
-                                Circle()
-                                    .fill(colorItem.color)
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(selectedColorName == colorItem.name ? Color.primary : Color.clear, lineWidth: 3)
-                                    )
-                            }
-                        }
-                    }
-                    .padding(.vertical, 8)
-                }
-            }
-            .navigationTitle("Custom Category")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveCustomCategory()
-                    }
-                    .disabled(categoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-        }
-    }
-    
-    private func saveCustomCategory() {
-        let trimmedName = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
-        
-        let customCategory = SkillCategory.custom(
-            name: trimmedName,
-            icon: selectedIcon,
-            colorName: selectedColorName
-        )
-        
-        appState.addCustomCategory(customCategory)
-        onSave(customCategory)
     }
 }
 

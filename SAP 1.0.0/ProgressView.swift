@@ -7,11 +7,11 @@
 
 import SwiftUI
 
-// B-005: Progress Tracking Screen
+// B-005: Progress Tracking Screen - Redesigned to match HelloHabit style
 struct ProgressTrackingView: View {
     @Bindable var appState: AppState
-    @State private var selectedViewType: ViewType = .weekly
-    @State private var selectedSkillId: UUID?
+    @State private var selectedViewType: ViewType = .annual
+    @State private var selectedYear: Int
     @State private var showingExportSheet = false
     @State private var exportText: String = ""
     @State private var showingImportSheet = false
@@ -24,55 +24,45 @@ struct ProgressTrackingView: View {
         case annual = "Year"
     }
     
+    init(appState: AppState) {
+        self.appState = appState
+        let calendar = Calendar.current
+        _selectedYear = State(initialValue: calendar.component(.year, from: Date()))
+    }
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // View type selector
-                Picker("View Type", selection: $selectedViewType) {
-                    ForEach(ViewType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding()
+                // Custom header - HelloHabit style (consistent across all views)
+                customHeader
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 16)
                 
-                // Progress content
+                // View type selector - HelloHabit style buttons (consistent across all views)
+                viewTypeSelector
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                
+                // Year navigation (only for Year view) - HelloHabit style
+                if selectedViewType == .annual {
+                    yearNavigationView
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                }
+                
+                // Progress content - consistent padding across all views
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Overall statistics
-                        overallStatsView
-                        
-                        // Skills progress grid
-                        skillsProgressGrid
+                        // Skills progress list
+                        skillsProgressList
                     }
-                    .padding()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 16)
                 }
             }
-            .navigationTitle("Progress")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button {
-                            if let json = appState.exportData() {
-                                exportText = json
-                                showingExportSheet = true
-                            }
-                        } label: {
-                            Label("Export Data", systemImage: "square.and.arrow.up")
-                        }
-                        
-                        Button {
-                            importText = ""
-                            importError = nil
-                            showingImportSheet = true
-                        } label: {
-                            Label("Import Data", systemImage: "square.and.arrow.down")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .sheet(isPresented: $showingExportSheet) {
             NavigationStack {
@@ -149,49 +139,135 @@ struct ProgressTrackingView: View {
         }
     }
     
-    // Overall statistics view
-    private var overallStatsView: some View {
-        let allProgress = appState.getAllProgress()
-        let totalSkills = allProgress.count
-        let completedSkills = allProgress.filter { $0.completionPercentage > 0 }.count
-        let averageCompletion = allProgress.isEmpty ? 0.0 : allProgress.map { $0.completionPercentage }.reduce(0, +) / Double(allProgress.count)
-        
-        return VStack(spacing: 16) {
-            HStack(spacing: 20) {
-                StatCard(
-                    title: "Skills",
-                    value: "\(totalSkills)",
-                    color: .blue
-                )
-                
-                StatCard(
-                    title: "Active",
-                    value: "\(completedSkills)",
-                    color: .green
-                )
-                
-                StatCard(
-                    title: "Avg. Completion",
-                    value: String(format: "%.0f%%", averageCompletion),
-                    color: .orange
-                )
+    // View type selector - HelloHabit style button row
+    private var viewTypeSelector: some View {
+        HStack(spacing: 8) {
+            viewTypeButton(type: .weekly, icon: "list.bullet")
+            viewTypeButton(type: .monthly, icon: "square.grid.3x3")
+            viewTypeButton(type: .annual, icon: "square.grid.3x3")
+        }
+    }
+    
+    // Individual view type button - HelloHabit style
+    private func viewTypeButton(type: ViewType, icon: String) -> some View {
+        Button(action: {
+            selectedViewType = type
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                Text(type.rawValue)
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(selectedViewType == type ? Color(.systemGray2) : Color(.systemGray6))
+            )
+            .foregroundColor(selectedViewType == type ? .white : .primary)
+        }
+    }
+    
+    // Year navigation view - HelloHabit style
+    private var yearNavigationView: some View {
+        HStack(spacing: 8) {
+            // Year display button
+            Button(action: {}) {
+                Text(String(selectedYear))
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray6))
+                    )
+                    .foregroundColor(.primary)
+            }
+            
+            // Left arrow
+            Button(action: {
+                selectedYear -= 1
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray6))
+                    )
+                    .foregroundColor(.primary)
+            }
+            
+            // Today button
+            let calendar = Calendar.current
+            let isCurrentYear = calendar.component(.year, from: Date()) == selectedYear
+            Button(action: {
+                selectedYear = calendar.component(.year, from: Date())
+            }) {
+                Text("Today")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isCurrentYear ? Color(.systemGray2) : Color(.systemGray6))
+                    )
+                    .foregroundColor(isCurrentYear ? .white : .primary)
+            }
+            
+            // Right arrow
+            Button(action: {
+                selectedYear += 1
+            }) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray6))
+                    )
+                    .foregroundColor(.primary)
             }
         }
     }
     
-    // Skills progress grid
-    private var skillsProgressGrid: some View {
+    // Custom header - HelloHabit style
+    private var customHeader: some View {
+        HStack {
+            Button(action: {}) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 44)
+            }
+            
+            Spacer()
+            
+            Text("Habit Reports")
+                .font(.system(size: 17, weight: .semibold))
+            
+            Spacer()
+            
+            Button(action: {}) {
+                Image(systemName: "leaf.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 44)
+            }
+        }
+    }
+    
+    // Skills progress list
+    private var skillsProgressList: some View {
         let allProgress = appState.getAllProgress()
         
-        return VStack(alignment: .leading, spacing: 16) {
-            Text("Skills Overview")
-                .font(.title2)
-                .fontWeight(.bold)
-            
+        return VStack(spacing: 24) {
             ForEach(allProgress) { progress in
                 SkillProgressCard(
                     progress: progress,
                     viewType: selectedViewType,
+                    selectedYear: selectedYear,
                     appState: appState
                 )
             }
@@ -199,148 +275,152 @@ struct ProgressTrackingView: View {
     }
 }
 
-// Stat card component
-struct StatCard: View {
-    let title: String
-    let value: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Text(value)
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(color)
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(color.opacity(0.1))
-        .cornerRadius(12)
-    }
-}
-
-// Skill progress card with heatmap
+// Skill progress card with Git-style grid
+// Uses exact skill category colors from app configuration for consistency
 struct SkillProgressCard: View {
     let progress: SkillProgress
     let viewType: ProgressTrackingView.ViewType
+    let selectedYear: Int
     let appState: AppState
+    
+    // Get skill for color and details
+    private var skill: Skill? {
+        appState.skills.first { $0.id == progress.skillId }
+    }
+    
+    // Get skill color with fallback - ensures consistency across app
+    // This color comes from the skill's category, which is set during task creation
+    // and used consistently in: Home screen, Progress view, and all task displays
+    private var skillColor: Color {
+        // Use the exact category color from the skill
+        // This ensures the same color appears in:
+        // - Task cards on home screen
+        // - Progress grid squares
+        // - Checkmark icons
+        // - All other skill-related UI elements
+        skill?.category.color ?? .blue
+    }
+    
+    // Calculate accurate completion percentage
+    private var completionPercentage: Double {
+        let dates = getDatesForViewType()
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Filter to only dates that have passed
+        let pastDates = dates.filter { $0 <= now }
+        guard !pastDates.isEmpty else { return 0 }
+        
+        // Count completions for the date range
+        var completedDays = 0
+        for date in pastDates {
+            let completion = progress.completions.first { completion in
+                calendar.isDate(completion.date, inSameDayAs: date)
+            }
+            if let completion = completion {
+                // Count full as 1, partial as 0.5
+                switch completion.completionLevel {
+                case .full:
+                    completedDays += 1
+                case .partial:
+                    completedDays += 1 // Count partial as full for percentage
+                case .none:
+                    break
+                }
+            }
+        }
+        
+        return Double(completedDays) / Double(pastDates.count) * 100
+    }
+    
+    // Get target/goal description
+    private var targetDescription: String {
+        guard let skill = skill else { return "" }
+        if !skill.trackingMetrics.dailyGoal.isEmpty {
+            return "\(skill.trackingMetrics.dailyGoal) per day"
+        } else if !skill.trackingMetrics.weeklyGoal.isEmpty {
+            return "\(skill.trackingMetrics.weeklyGoal) per week"
+        } else {
+            return skill.taskDescription
+        }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Skill name and percentage
-            HStack {
-                Text(progress.skillName)
-                    .font(.headline)
+            // Habit header - HelloHabit style: checkbox, name/goal, percentage
+            // CONSISTENT layout across all view types
+            HStack(alignment: .center, spacing: 12) {
+                // Checkbox icon with skill color - fixed size
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(skillColor)
+                    .font(.system(size: 20))
+                    .frame(width: 22, height: 22)
+                    .fixedSize()
                 
-                Spacer()
-                
-                Text(String(format: "%.0f%%", progress.completionPercentage))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                // Name and goal text - flexible, consistent spacing
+                HStack(spacing: 4) {
+                    Text(progress.skillName)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    if !targetDescription.isEmpty {
+                        Text("-")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Text(targetDescription)
+                            .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.secondary)
             }
-            
-            // Completion stats (removed streak tracking)
-            HStack(spacing: 16) {
-                let fullCompletions = progress.completions.filter { $0.completionLevel == .full }.count
-                let partialCompletions = progress.completions.filter { $0.completionLevel == .partial }.count
+                }
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Label("\(fullCompletions) full", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.green)
-                
-                Label("\(partialCompletions) partial", systemImage: "circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.blue)
+                // Percentage - right aligned, fixed width to prevent shifting
+                Text("\(Int(completionPercentage))%")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .frame(minWidth: 45, alignment: .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity)
             
-            // Heatmap grid
-            heatmapGrid
+            // Git-style progress grid - HelloHabit dense style
+            // CONSISTENT grid layout across all view types
+            progressGrid
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
-    // Heatmap grid based on view type
-    private var heatmapGrid: some View {
+    // Progress grid based on view type - HelloHabit exact style: very dense squares
+    // CONSISTENT implementation across all view types
+    private var progressGrid: some View {
         let dates = getDatesForViewType()
-        let columns = Array(repeating: GridItem(.flexible(), spacing: viewType == .monthly ? 2 : 4), count: getColumnCount())
-        let calendar = Calendar.current
-        let currentMonth = calendar.component(.month, from: Date())
-        let currentYear = calendar.component(.year, from: Date())
+        let columns = getColumnsForViewType()
+        let squareSize = getSquareSize()
+        // Consistent minimal spacing for dense grid - HelloHabit style (1.5px for both rows and columns)
+        let rowSpacing: CGFloat = 1.5
         
-        return Group {
-            if viewType == .monthly {
-                // Full calendar view for monthly
-                VStack(spacing: 4) {
-                    // Day headers
-                    HStack(spacing: 2) {
-                        ForEach(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"], id: \.self) { day in
-                            Text(day)
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    
-                    // Calendar grid
-                    LazyVGrid(columns: columns, spacing: 2) {
-                        ForEach(Array(dates.enumerated()), id: \.element) { index, date in
-                            let completion = progress.completions.first { completion in
-                                calendar.isDate(completion.date, inSameDayAs: date)
-                            }
-                            
-                            let completionLevel = completion?.completionLevel ?? .none
-                            let isInCurrentMonth = calendar.component(.month, from: date) == currentMonth &&
-                                                   calendar.component(.year, from: date) == currentYear
-                            
-                            let prevCompletion = index > 0 ? progress.completions.first { calendar.isDate($0.date, inSameDayAs: dates[index - 1]) } : nil
-                            let nextCompletion = index < dates.count - 1 ? progress.completions.first { calendar.isDate($0.date, inSameDayAs: dates[index + 1]) } : nil
-                            
-                            CalendarDayCellView(
-                                date: date,
-                                completions: completion != nil ? [completion!] : [],
-                                isToday: calendar.isDate(date, inSameDayAs: Date()),
-                                isInCurrentMonth: isInCurrentMonth,
-                                previousDate: index > 0 ? dates[index - 1] : nil,
-                                nextDate: index < dates.count - 1 ? dates[index + 1] : nil,
-                                previousCompletions: prevCompletion != nil ? [prevCompletion!] : [],
-                                nextCompletions: nextCompletion != nil ? [nextCompletion!] : []
-                            )
-                        }
-                    }
-                }
-            } else {
-                // Simple grid for weekly/annual
-                LazyVGrid(columns: columns, spacing: 4) {
-                    ForEach(dates, id: \.self) { date in
-                        let completion = progress.completions.first { completion in
-                            calendar.isDate(completion.date, inSameDayAs: date)
-                        }
-                        
-                        let completionLevel = completion?.completionLevel ?? .none
-                        let isCompleted = completion?.isCompleted ?? false
-                        let color = getColorForCompletion(isCompleted: isCompleted, date: date)
-                        
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(color)
-                            .frame(height: 20)
-                            .overlay(
-                                Text("\(calendar.component(.day, from: date))")
-                                    .font(.system(size: 8))
-                                    .foregroundColor(completionLevel == .full ? .white : (completionLevel == .partial ? .black.opacity(0.6) : .secondary))
-                                    .opacity(calendar.isDate(date, inSameDayAs: Date()) ? 1 : 0.6)
-                            )
-                    }
-                }
+        return LazyVGrid(
+            columns: columns,
+            alignment: .leading,
+            spacing: rowSpacing
+        ) {
+            ForEach(dates, id: \.self) { date in
+                let color = getColorForDate(date, skillColor: skillColor)
+                
+                // Uniform square cells - HelloHabit style: dense, consistent sizing
+                Rectangle()
+                    .fill(color)
+                    .frame(width: squareSize, height: squareSize)
+                    .cornerRadius(1.5)
+                    .fixedSize()
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.none, value: viewType) // Disable animations to prevent layout shifts
     }
     
     // Get dates for the selected view type
@@ -351,14 +431,15 @@ struct SkillProgressCard: View {
         
         switch viewType {
         case .weekly:
-            let startDate = calendar.date(byAdding: .day, value: -6, to: now) ?? now
-            dates = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: startDate) }
+            let weekday = calendar.component(.weekday, from: now)
+            let daysFromMonday = (weekday + 5) % 7
+            let weekStart = calendar.date(byAdding: .day, value: -daysFromMonday, to: now) ?? now
+            dates = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
             
         case .monthly:
-            // Show full calendar month view
             let components = calendar.dateComponents([.year, .month], from: now)
             guard let monthStart = calendar.date(from: components) else {
-                let startDate = calendar.date(byAdding: .day, value: -29, to: now) ?? now
+            let startDate = calendar.date(byAdding: .day, value: -29, to: now) ?? now
                 return (0..<30).compactMap { calendar.date(byAdding: .day, value: $0, to: startDate) }
             }
             
@@ -366,69 +447,100 @@ struct SkillProgressCard: View {
             let daysFromMonday = (firstWeekday + 5) % 7
             let calendarStart = calendar.date(byAdding: .day, value: -daysFromMonday, to: monthStart) ?? monthStart
             
-            // Show 6 weeks (42 days) to fill the grid
+            // Show 6 weeks (42 days)
             dates = (0..<42).compactMap { calendar.date(byAdding: .day, value: $0, to: calendarStart) }
             
         case .annual:
-            // Show last 12 months, one representative day per month (first day)
-            let startDate = calendar.date(byAdding: .month, value: -11, to: now) ?? now
-            var monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: startDate)) ?? startDate
-            dates = (0..<12).compactMap { _ in
-                let date = monthStart
-                monthStart = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart
-                return date
+            // Show all days in the selected year - GitHub contribution graph style
+            guard let yearStart = calendar.date(from: DateComponents(year: selectedYear, month: 1, day: 1)) else {
+                return []
             }
+            
+            // Get the last day of the year (handles leap years properly)
+            guard let nextYearStart = calendar.date(from: DateComponents(year: selectedYear + 1, month: 1, day: 1)),
+                  let yearEnd = calendar.date(byAdding: .day, value: -1, to: nextYearStart) else {
+                return []
+            }
+            
+            // Calculate total days in year (handles leap years)
+            // Use rangeIncludingEndDate to get inclusive count
+            let daysInYear = calendar.dateComponents([.day], from: yearStart, to: yearEnd).day ?? 365
+            
+            // Generate all dates for the year
+            // Note: daysInYear is the difference, so we need daysInYear + 1 total days
+            dates = (0...daysInYear).compactMap { dayOffset in
+                calendar.date(byAdding: .day, value: dayOffset, to: yearStart)
+            }
+            
+            // Ensure we have exactly the right number of days
+            // For a 53-column grid (52 weeks + 1), we need to pad or trim
+            // GitHub style: 53 columns, each representing a week
+            // We'll show all days, wrapping to next row as needed
         }
         
         return dates
     }
     
-    // Get column count based on view type
-    private func getColumnCount() -> Int {
+    // Get columns for grid - HelloHabit style: CONSISTENT spacing across all views
+    private func getColumnsForViewType() -> [GridItem] {
+        let columnSpacing: CGFloat = 1.5 // Consistent spacing across all views
+        
         switch viewType {
-        case .weekly: return 7
-        case .monthly: return 7 // 6 rows of 7 days (full calendar month)
-        case .annual: return 6 // 2 rows of 6 months
+        case .weekly:
+            return Array(repeating: GridItem(.flexible(), spacing: columnSpacing), count: 7)
+        case .monthly:
+            return Array(repeating: GridItem(.flexible(), spacing: columnSpacing), count: 7)
+        case .annual:
+            // 53 columns for year view - HelloHabit style: consistent spacing
+            return Array(repeating: GridItem(.flexible(), spacing: columnSpacing), count: 53)
         }
     }
     
-    // Get color for completion state with Git-style color coding (light = partial, dark = full)
-    private func getColorForCompletion(isCompleted: Bool, date: Date) -> Color {
+    // Get square size based on view type - HelloHabit style: CONSISTENT sizing logic
+    private func getSquareSize() -> CGFloat {
+        switch viewType {
+        case .weekly:
+            return 10 // Slightly larger for weekly view
+        case .monthly:
+            return 9 // Medium size for monthly view
+        case .annual:
+            // HelloHabit style: very small squares for year view (like GitHub contribution graph)
+            return 4.5 // Smaller for year view to fit all days
+        }
+    }
+    
+    // Get color for a specific date with Git-style color coding
+    // Uses exact skill category color from app configuration
+    private func getColorForDate(_ date: Date, skillColor: Color) -> Color {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Future dates are gray/transparent
+        if date > now {
+            return Color.gray.opacity(0.1)
+        }
+        
+        // Find completion for this date
         let completion = progress.completions.first { completion in
-            Calendar.current.isDate(completion.date, inSameDayAs: date)
+            calendar.isDate(completion.date, inSameDayAs: date)
         }
         
         let completionLevel = completion?.completionLevel ?? .none
-        let isToday = Calendar.current.isDate(date, inSameDayAs: Date())
         
-        if date > Date() {
-            // Future dates
-            return .clear
-        }
-        
-        // Git-style color coding: light = partial, dark = full, gray = none
+        // Git-style color coding with skill-specific colors:
+        // - Dark/saturated: Full completion (uses exact category color)
+        // - Light (50% opacity): Partial completion (same color, lighter)
+        // - Gray: No completion
         switch completionLevel {
         case .full:
-            // Dark color for full completion
-            if isToday {
-                return Color(red: 0.2, green: 0.6, blue: 0.3) // Dark green for today
-            } else {
-                return Color(red: 0.1, green: 0.5, blue: 0.2) // Darker green for past
-            }
+            // Use exact skill category color for full completion
+            return skillColor
         case .partial:
-            // Light color for partial completion
-            if isToday {
-                return Color(red: 0.6, green: 0.8, blue: 0.6) // Light green for today
-            } else {
-                return Color(red: 0.5, green: 0.7, blue: 0.5) // Lighter green for past
-            }
+            // Use lighter version of skill color for partial completion
+            return skillColor.opacity(0.5)
         case .none:
             // Gray for no completion
-            if isToday {
-                return Color.gray.opacity(0.3)
-            } else {
-                return Color.gray.opacity(0.2)
-            }
+            return Color.gray.opacity(0.2)
         }
     }
 }

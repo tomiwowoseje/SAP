@@ -21,6 +21,11 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Progress", systemImage: "chart.bar.fill")
                 }
+            
+            WeightTrackingView(appState: appState)
+                .tabItem {
+                    Label("Weight", systemImage: "scalemass")
+                }
         }
     }
 }

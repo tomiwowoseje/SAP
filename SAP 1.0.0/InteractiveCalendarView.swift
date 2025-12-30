@@ -109,20 +109,37 @@ struct InteractiveCalendarView: View {
     }
     
     private var weekRangeText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
+        let calendar = Calendar.current
+        let today = Date()
+        let todayStart = calendar.startOfDay(for: today)
         
+        // Check if current week is the same as the displayed week
         if let firstDay = weekDays.first, let lastDay = weekDays.last {
-            let firstMonth = Calendar.current.component(.month, from: firstDay)
-            let lastMonth = Calendar.current.component(.month, from: lastDay)
+            let weekStart = calendar.startOfDay(for: firstDay)
+            let todayWeekday = calendar.component(.weekday, from: today)
+            let daysFromMonday = (todayWeekday + 5) % 7
+            let thisWeekStart = calendar.date(byAdding: .day, value: -daysFromMonday, to: todayStart) ?? todayStart
+            let thisWeekStartDay = calendar.startOfDay(for: thisWeekStart)
+            
+            // If the displayed week is the current week, show "This Week"
+            if weekStart == thisWeekStartDay {
+                return "This Week"
+            }
+            
+            // Otherwise show date range
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            
+            let firstMonth = calendar.component(.month, from: firstDay)
+            let lastMonth = calendar.component(.month, from: lastDay)
             
             if firstMonth == lastMonth {
-                return "\(formatter.string(from: firstDay)) - \(Calendar.current.component(.day, from: lastDay))"
+                return "\(formatter.string(from: firstDay)) - \(calendar.component(.day, from: lastDay))"
             } else {
                 return "\(formatter.string(from: firstDay)) - \(formatter.string(from: lastDay))"
             }
         }
-        return ""
+        return "This Week"
     }
     
     private func previousWeek() {

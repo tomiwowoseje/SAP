@@ -23,18 +23,24 @@ struct SkillCategory: Identifiable, Hashable, Codable {
     let colorName: String // Store color as string for Hashable
     let isCustom: Bool
     
+    /// Base color for the category (returns primary color from gradient)
     var color: Color {
-        switch colorName {
-        case "blue": return .blue
-        case "red": return .red
-        case "purple": return .purple
-        case "orange": return .orange
-        case "pink": return .pink
-        case "green": return .green
-        case "mint": return .mint
-        case "gray": return .gray
-        default: return .blue
-        }
+        return ColorPalette.primaryColor(for: name)
+    }
+    
+    /// Gradient for the category (HelloHabit-style gradient)
+    var gradient: LinearGradient {
+        return ColorPalette.linearGradient(for: name)
+    }
+    
+    /// Primary color from gradient (for icons, text, etc.)
+    var primaryColor: Color {
+        return ColorPalette.primaryColor(for: name)
+    }
+    
+    /// Secondary color from gradient (lighter shade)
+    var secondaryColor: Color {
+        return ColorPalette.secondaryColor(for: name)
     }
     
     // Predefined categories
@@ -87,8 +93,22 @@ struct SkillCategory: Identifiable, Hashable, Codable {
         colorName: "mint",
         isCustom: false
     )
+    static let nutrition = SkillCategory(
+        id: "nutrition",
+        name: "Nutrition",
+        icon: "fork.knife",
+        colorName: "red",
+        isCustom: false
+    )
+    static let hydration = SkillCategory(
+        id: "hydration",
+        name: "Hydration",
+        icon: "drop.fill",
+        colorName: "cyan",
+        isCustom: false
+    )
     
-    // Predefined categories list
+    // Predefined categories list (matching HelloHabit requirements)
     static let predefinedCategories: [SkillCategory] = [
         .personalDevelopment,
         .fitness,
@@ -96,7 +116,9 @@ struct SkillCategory: Identifiable, Hashable, Codable {
         .professionalGrowth,
         .health,
         .creativeSkills,
-        .mindfulness
+        .mindfulness,
+        .nutrition,
+        .hydration
     ]
     
     // Create custom category
@@ -284,6 +306,38 @@ struct MemorableMoment: Identifiable, Codable {
     }
 }
 
+// Weight entry for tracking weight over time
+struct WeightEntry: Identifiable, Codable {
+    let id: UUID
+    let date: Date
+    let weight: Double // in kg
+    
+    init(id: UUID = UUID(), date: Date = Date(), weight: Double) {
+        self.id = id
+        self.date = Calendar.current.startOfDay(for: date)
+        self.weight = weight
+    }
+    
+    // Custom Codable to handle id properly
+    enum CodingKeys: String, CodingKey {
+        case id, date, weight
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        date = try container.decode(Date.self, forKey: .date)
+        weight = try container.decode(Double.self, forKey: .weight)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(date, forKey: .date)
+        try container.encode(weight, forKey: .weight)
+    }
+}
+
 // Task model with rollover support
 struct Task: Identifiable, Codable {
     let id: UUID
@@ -306,6 +360,37 @@ struct Task: Identifiable, Codable {
         self.category = category
         self.canRollover = canRollover
         self.rolledOverFrom = rolledOverFrom
+    }
+    
+    // Custom Codable to handle id properly
+    enum CodingKeys: String, CodingKey {
+        case id, name, skillName, isCompleted, completionLevel, skillId, category, canRollover, rolledOverFrom
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        skillName = try container.decode(String.self, forKey: .skillName)
+        isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
+        completionLevel = try container.decode(CompletionLevel.self, forKey: .completionLevel)
+        skillId = try container.decode(UUID.self, forKey: .skillId)
+        category = try container.decode(SkillCategory.self, forKey: .category)
+        canRollover = try container.decode(Bool.self, forKey: .canRollover)
+        rolledOverFrom = try container.decodeIfPresent(Date.self, forKey: .rolledOverFrom)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(skillName, forKey: .skillName)
+        try container.encode(isCompleted, forKey: .isCompleted)
+        try container.encode(completionLevel, forKey: .completionLevel)
+        try container.encode(skillId, forKey: .skillId)
+        try container.encode(category, forKey: .category)
+        try container.encode(canRollover, forKey: .canRollover)
+        try container.encodeIfPresent(rolledOverFrom, forKey: .rolledOverFrom)
     }
 }
 

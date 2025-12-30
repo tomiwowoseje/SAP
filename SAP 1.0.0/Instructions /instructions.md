@@ -1,13 +1,16 @@
-# Skill Tracker App Requirements Document
+# Skill Tracker App Requirements Document (Updated)
 
 ## 1. App Overview
 This is an app to help people learn and practice new skills every day. It's for anyone who wants to build good habits, learn something new, or keep track of their progress in different activities. Think of it like a personal coach in your phone that helps you stay motivated and see how far you've come.
 
+**Design Philosophy**: Inspired by HelloHabit's vibrant, card-based design with colorful gradients and intuitive interactions.
+
 ## 2. Main Goals
 1. Help users set and track daily and weekly skills
 2. Make it easy to check off completed tasks
-3. Show progress over time
-4. Keep users motivated to learn and practice
+3. Show progress over time with visual color-coded tracking
+4. Keep users motivated through streaks and vibrant UI
+5. Provide an engaging, aesthetically pleasing user experience
 
 ## 3. User Stories
 - US-001: As a user, I want to add my own skills so that I can track things important to me
@@ -19,6 +22,11 @@ This is an app to help people learn and practice new skills every day. It's for 
 - US-007: As a user, I want to track my morning routine habits so that I can build consistent daily habits
 - US-008: As a user, I want to view my progress in week, month, and year views so that I can see long-term trends
 - US-009: As a user, I want to record memorable moments so that I can celebrate achievements and milestones
+- US-010: As a user, I want a color-coded progress tracking system that shows partial and full completions with varying color intensities
+- US-011: As a user, I want a consistent HelloHabit-inspired UI design across all screens with vibrant card-based layouts
+- US-012: As a user, I want an interactive calendar that shows task completion status with visual indicators
+- US-013: As a user, I want to see my streak count for each habit to stay motivated
+- US-014: As a user, I want expandable/collapsible category sections to organize my habits
 
 ## 4. Features
 - F-001: Add new skills to track
@@ -68,271 +76,635 @@ This is an app to help people learn and practice new skills every day. It's for 
   - When it appears: Can be added from task completion or progress screens
   - Features: Categorization, date tracking, descriptions
 
+- F-010: Color-Coded Progress Tracking
+  - What it does: Implement a color intensity system showing task completion levels
+  - Color scheme: 
+    * Light colors for partial completion
+    * Dark colors for full completion
+    * Gradient backgrounds for visual appeal
+  - Applies across: Home screen cards, progress views, and habit reports
+  - Features: Consistent color mapping across all views
+
+- F-011: HelloHabit-Inspired UI Design
+  - What it does: Implement card-based design with gradient backgrounds
+  - Features:
+    * Unique vibrant colors for different habit categories
+    * Rounded card design (12-15px corners)
+    * Soft gradient backgrounds
+    * Clean, modern typography
+    * Consistent layout across screens
+    * Smooth animations and transitions
+
+- F-012: Streak Tracking System
+  - What it does: Track and display consecutive days of habit completion
+  - Visual indicator: Fire icon (🔥) with streak count
+  - Features:
+    * Prominently display streak number on each card
+    * Animated/highlighted for motivation
+    * Consistent placement on habit cards
+    * Streak reset on missed days
+
+- F-013: Expandable Category Sections
+  - What it does: Allow users to expand/collapse habit categories
+  - Features:
+    * Collapsible sections (Morning, Health, etc.)
+    * Chevron indicators for expand/collapse state
+    * Smooth animation transitions
+    * Persistent state across app sessions
+
 ## 5. Screens
-- S-001: Home Screen
-  - What's on the screen: 
-    * Interactive week calendar (scrollable, highlights current day)
-    * Morning routine section with 4 specific habits
-    * List of tasks for selected date (supports partial completion and rollover)
-    * Quick add button for new skills
-  - How to get there: First screen when opening the app
-  - Design: Clean, minimalist design with purple/blue color scheme
 
-- S-002: Add Skill Screen
-  - What's on the screen: Form to add a new skill, set frequency, and details
-  - How to get there: Tap a "+" button on the home screen
-  - Features: Simplified task input, rollover option, category selection
+### S-001: Home Screen (Complete Redesign)
+**Overall Layout and Style:**
+- Colorful, card-based design inspired by HelloHabit
+- Each habit as a full-width, rounded card
+- Vibrant, distinct color for each habit category
+- Soft, gradient color backgrounds
+- Clean, modern typography
 
-- S-003: Progress Screen
-  - What's on the screen: 
-    * Git-style heatmap grid showing completion history
-    * Week, month, and year view options
-    * Color-coded completion states (light = partial, dark = full)
-    * Overall statistics and skill-specific progress
-  - How to get there: Tap a "Progress" tab or button
-  - Features: Export/import data, memorable moments integration
+**Components:**
+1. **Top Navigation Bar**
+   - Date/day navigation
+   - Fire icon with total streak count (🔥 4)
+   - Add habit button (+)
+   - Menu button (hamburger)
+
+2. **Interactive Week Calendar**
+   - Scrollable week view (Thu-Wed)
+   - Connected date bubbles showing progression
+   - Highlighted current day (larger, outlined)
+   - Purple/blue gradient color scheme
+   - Navigation controls (previous/next week)
+
+3. **Habit Cards** (Card-Based Design)
+   - **Card Structure:**
+     * Full-width rounded cards (12-15px corner radius)
+     * Gradient backgrounds matching category color
+     * Left-aligned icon (white, category-specific)
+     * Habit name (bold, white text)
+     * Frequency subtitle (lighter white text)
+     * Streak indicator (🔥 number) - top right
+     * Interaction buttons - right side (+ or ✓)
+   
+   - **Example Category Sections** (User-Customizable)
+     * Morning Section (Expandable)
+       - Section header with sun icon and chevron
+       - User-defined morning habits with appropriate category colors
+     
+     * Health Section (Expandable)
+       - Section header with heart icon and chevron
+       - User-defined health habits with appropriate category colors
+     
+     * Other Sections (User-Created)
+       - Custom sections based on user's habit organization
+       - Each section can have its own icon and color theme
+
+4. **Bottom Navigation**
+   - Habits tab (active - purple highlight)
+   - Statistics tab (bar chart icon)
+   - Settings tab (gear icon)
+   - Clean icons with text labels
+
+**Color Palette (Category-Based):**
+- Personal Development: Purple (#B57FFF to #9966E6)
+- Fitness: Green (#4CAF50 to #388E3C)
+- Learning: Orange (#FF9800 to #E68900)
+- Health: Teal (#40C4C4 to #2FA6A6)
+- Mindfulness: Blue (#4D99FF to #3377DD)
+- Creative: Pink (#E91E63 to #C2185B)
+- Nutrition: Red (#FF5252 to #DD3333)
+- Hydration: Light Blue (#42A5F5 to #1E88E5)
+- Custom: Customizable gradient based on user preference
+
+**Interaction Elements:**
+- '+' button for adding/incrementing progress
+- '✓' checkmark for completed tasks
+- Expandable sections (smooth animations)
+- Card press for details/editing
+- Swipe gestures for quick actions
+
+**Technical Requirements:**
+- SwiftUI implementation
+- Responsive design for all iPhone sizes
+- Smooth 60fps animations
+- Accessibility support (VoiceOver, Dynamic Type)
+- Dark mode support
+
+**Design to get there:**
+- First screen when opening the app
+- Clean, minimalist design with vibrant colors
+- Priority: Visual appeal and ease of use
+
+### S-002: Add Skill Screen
+**What's on the screen:**
+- Form to add a new skill with enhanced options
+- Category selection (dropdown/list with color indicators)
+- Frequency options with visual calendar picker
+- Time frame setting (start/end dates)
+- Rollover option toggle
+- Icon/color selection for card customization
+
+**Design:**
+- Match HelloHabit aesthetic
+- Preview of habit card as user customizes
+- Smooth transitions and animations
+
+**How to get there:** 
+- Tap "+" button on home screen
+- From settings menu
+
+### S-003: Progress Screen (Habit Reports Redesign)
+**Overall Layout:**
+- Header: "Habit Reports" with close button (X) and download icon
+- View selector: Week / Month / Year tabs (rounded, pill-style)
+- Year selector and navigation (< Today >)
+
+**Components:**
+1. **View Tabs**
+   - Week View (vertical bars icon)
+   - Month View (calendar grid icon)
+   - Year View (large grid icon - default selected)
+   - Selected tab: dark background, white icon/text
+
+2. **Habit Progress Cards**
+   Each card shows:
+   - Checkmark icon (colored, matching habit)
+   - Habit name and goal (e.g., "Drink Water - 8 cups per day")
+   - Completion percentage (right-aligned, large)
+   - Git-style heatmap grid:
+     * Small squares arranged in rows
+     * Color intensity shows completion level:
+       - Empty/white: No completion
+       - Light color: Partial completion
+       - Medium color: Good completion
+       - Dark/saturated color: Full completion
+     * Year view: ~365 squares (52 weeks × 7 days)
+     * Organized by weeks/months
+
+3. **Color-Coded Habits**
+   Each habit card uses its category color gradient for the heatmap:
+   - Personal Development: Purple gradient
+   - Fitness: Green gradient
+   - Learning: Orange gradient
+   - Health: Teal gradient
+   - Mindfulness: Blue gradient
+   - Creative: Pink gradient
+   - Nutrition: Red gradient
+   - Hydration: Light blue gradient
+   - Custom categories: User-selected gradients
+
+**Year View Specifics:**
+- Grid layout: 7 columns (days) × ~52 rows (weeks)
+- Compressed vertical view showing full year
+- Pattern recognition of completion trends
+- Gaps and streaks clearly visible
+
+**Month View Specifics:**
+- Calendar grid layout (7 columns, 4-5 rows)
+- All days of selected month
+- Larger squares than year view
+- Current month highlighted
+
+**Week View Specifics:**
+- 7-day horizontal or vertical layout
+- Large, detailed squares
+- Daily notes/details visible
+- Easy to see daily patterns
+
+**Interaction:**
+- Tap view tabs to switch between Week/Month/Year
+- Navigation arrows to change time period
+- Scroll to see all habits
+- Tap individual squares for daily details
+- Tap habit card for detailed breakdown
+
+**Features:**
+- Export/import data button (top right)
+- Memorable moments integration
+- Statistics summary per habit
+- Trend analysis indicators
+
+**Design:**
+- Light background with subtle shadows
+- Consistent with HelloHabit aesthetic
+- Clear visual hierarchy
+- Smooth tab switching animations
+
+**How to get there:** 
+- Tap "Statistics" tab in bottom navigation
+- From habit card detail view
+
+### S-004: Settings Screen
+**What's on the screen:**
+- User preferences
+- Notification settings
+- Data management (backup/restore)
+- Theme selection (Light/Dark/Auto)
+- Category management
+- About section
+
+**Design:**
+- List-based settings interface
+- Toggle switches and selection menus
+- Matches app color scheme
 
 ## 6. Data
-- D-001: List of skills with name, frequency, and tracking details
+- D-001: List of skills with name, frequency, category, color, icon, and tracking details
 - D-002: Daily completion status for each skill (with partial completion support)
-- D-003: Historical completion data for progress tracking (removed streak tracking)
+- D-003: Historical completion data for progress tracking (with color intensity levels)
 - D-004: Morning routine completion data (habit ID + date -> completion level)
 - D-005: Rolled over tasks (skill ID -> rollover date)
 - D-006: Memorable moments (achievements, milestones, personal notes)
+- D-007: Streak data per habit (consecutive completion days)
+- D-008: Category definitions (name, color gradient, default icon)
+- D-009: User preferences (theme, notifications, default views)
 
 ## 7. Extra Details
 - Needs internet: No (works completely offline)
-- Data storage: On the device using Core Data or similar local storage
-- Permissions needed: None initially
-- Dark mode: Yes, support both light and dark modes
-- Backup option: Allow exporting progress data
+- Data storage: On the device using Core Data or SwiftData
+- Permissions needed: None initially (optional notifications later)
+- Dark mode: Yes, support both light and dark modes with adjusted gradients
+- Backup option: Allow exporting progress data as JSON/CSV
+- Animations: 60fps smooth transitions throughout
+- Accessibility: Full VoiceOver support, Dynamic Type, high contrast mode
 
 ## 8. Build Steps
-- B-001: Create basic home screen (S-001)
-  - Display time-based greeting (Good morning/afternoon/evening)
-  - Add interactive week calendar (see B-010)
-  - Add morning routine section (see B-011)
-  - Display tasks for selected date with partial completion support
-  - Remove login and notifications buttons
-  - Add quick task creation button
 
-- B-002: Develop Skill Management System
-  - Create functionality to:
-    - Edit existing skills
-    - Delete skills
-    - Adjust skill parameters
-    - Enable/disable task rollover
+### Phase 1: Core Infrastructure
+- B-001: Set up SwiftUI project structure with Core Data/SwiftData
+- B-002: Implement data models (Habit, DailyCompletion, Category, Streak)
+- B-003: Create AppState management system
+- B-004: Set up color palette and design system constants
 
-- B-003: Implement Comprehensive Skill Input
-  - Design skill creation screen with:
-    - Skill name input
-    - Category selection (dropdown/list)
-    - Frequency options
-    - Time frame setting (start/end dates)
-    - Tracking metrics (daily/weekly goals)
-    - Rollover option toggle
+### Phase 2: HelloHabit UI Foundation
+- B-005: **HelloHabit UI Redesign - Home Screen**
+  - Implement card-based home screen design
+  - Create reusable HabitCardView component:
+    * Gradient background support
+    * Icon + text layout
+    * Interaction buttons (+ and ✓)
+    * Streak indicator integration
+  - Develop gradient background system
+  - Create consistent color coding system across categories
+  - Implement card animations and transitions
+  - Build reusable UI components library
 
-- B-004: Category Management
-  - Create predefined categories
-  - Allow custom category creation
-  - Group skills by categories on home screen
-  - Color-code or icon-tag categories
+- B-006: **Enhanced Color Tracking System**
+  - Implement color intensity tracking in data model
+  - Create CompletionLevel enum (none, partial, medium, full)
+  - Build color mapping for completion levels:
+    * None: Empty/white
+    * Partial: 30% saturation
+    * Medium: 60% saturation
+    * Full: 100% saturation
+  - Update all progress views with new color system
+  - Create color interpolation functions
+  - Implement accessibility color adjustments
 
-- B-005: Git-Style Progress Tracking Screen
-  - Create heatmap grid-based progress visualization
-  - Show completion percentages
-  - Provide annual/monthly/weekly views (see B-012)
-  - Color-code completion states:
-    * Light color: Partial completion
-    * Dark color: Full completion
-    * Gray: No completion
-  - Remove streak tracking mechanism
+### Phase 3: Home Screen Implementation
+- B-007: **Top Navigation Bar**
+  - Time-based greeting feature
+  - Current date display
+  - Streak counter with fire icon
+  - Add habit button
+  - Menu/settings button
 
-- B-006: Time-Based Greeting Feature
-  - Implement dynamic greeting that changes based on:
-    - Current time of day
-    - Optional personalization
-  - Motivational messages
-
-- B-007: Skill Time Frame Management
-  - Allow setting specific duration for skills
-  - Automatic skill archiving/deactivation
-  - Reminder system for skill review
-
-- B-008: Data Persistence
-  - Save skill data
-  - Track historical performance with partial completion support
-  - Allow data export/import
-  - Save morning routine completions
-  - Save rolled over tasks
-  - Save memorable moments
-
-- B-009: Advanced Tracking Features
-  - Implement detailed analytics
-  - Show improvement trends
-  - Provide insights into skill progression
-
-- B-010: Interactive Week Calendar Implementation
+- B-008: **Interactive Week Calendar**
   - Create InteractiveCalendarView component
-  - Implement scrollable week navigation (previous/next week buttons)
-  - Highlight current day with purple/blue color scheme
-  - Allow date selection to view tasks for that date
-  - Display week range (e.g., "Dec 15 - 21")
-  - Use purple (#9966E6) and blue (#4D99FF) color palette
-  - Make calendar responsive across device sizes
+  - Implement scrollable week navigation
+  - Connected bubble design with lines
+  - Highlight current day (larger, outlined)
+  - Date selection functionality
+  - Purple/blue gradient styling
+  - Week range display
+  - Make responsive across device sizes
 
-- B-011: Morning Routine Implementation
-  - Create MorningRoutineView component
-  - Implement 4 specific morning habits:
-    * Read 10 pages (purple icon)
-    * Stretch (blue icon)
-    * Track weight (indigo icon)
-    * Drink 500ml water (cyan icon)
-  - Support partial and full completion tracking
-  - Visual indicators: Light color for partial, dark color for full
-  - Grid layout (2 columns)
+- B-009: **Expandable Category Sections**
+  - Create CategorySectionView component
+  - Implement expand/collapse functionality
+  - Chevron indicator animations
+  - Section header with icon
+  - Persistent state management
+  - Smooth height animations
+
+- B-010: **Habit Card Components**
+  - Build base HabitCardView with:
+    * Gradient backgrounds (category-specific)
+    * Icon and text layout
+    * Frequency subtitle
+    * Streak indicator position
+    * Interaction button placement
+  - Implement card press gestures
+  - Add swipe actions for quick edit/delete
+  - Create card shadow and border styling
+
+- B-011: **Morning Routine Implementation**
+  - Refactor as expandable category section
+  - Implement 4 specific morning habits
+  - Support partial and full completion
+  - Visual indicators with color coding
+  - Grid layout within section
   - Persist completion data per date
 
-- B-012: Comprehensive Tracking Views
-  - Create HabitTrackingGrid component
-  - Implement Week View:
-    * 7-day grid layout
-    * Show completion status per day
-    * Color-coded indicators
-  - Implement Month View:
-    * Calendar grid layout (7 columns, multiple rows)
-    * Show all days of month with completion status
-    * Highlight current month days
-  - Implement Year View:
-    * 12-month overview (3 columns, 4 rows)
-    * Show completion percentage per month
-    * Progress bars for each month
-  - Integrate with ProgressTrackingView
+- B-012: **Streak Tracking System**
+  - Create Streak data model
+  - Implement streak calculation logic:
+    * Count consecutive completion days
+    * Reset on missed days
+    * Handle partial completions
+  - Build streak display component
+  - Fire icon with count
+  - Animation for streak milestones
+  - Integrate with habit cards
 
-- B-013: Task Rollover Mechanism
-  - Add rollover property to Skill model
-  - Implement rollover functionality in AppState:
-    * Track rolled over tasks (skillId -> date)
-    * Process rollovers on app start
-    * Show rolled over tasks in task list
-  - Add rollover button to task cards
-  - Visual indicator for rolled over tasks (arrow icon)
+- B-013: **Bottom Navigation**
+  - Habits tab (default)
+  - Statistics tab
+  - Settings tab
+  - Active state styling (purple highlight)
+  - Icon + label design
+  - Tab switching transitions
+
+### Phase 4: Progress Tracking Screen
+- B-014: **Comprehensive Tracking Views - Base Structure**
+  - Create HabitReportsView component
+  - Implement view selector (Week/Month/Year tabs)
+  - Build navigation controls (< Today >)
+  - Year selector functionality
+  - Download/export button
+
+- B-015: **Git-Style Heatmap Component**
+  - Create HeatmapGridView component
+  - Implement square grid layout system:
+    * Calculate grid dimensions (7 cols × N rows)
+    * Handle different view densities
+    * Responsive sizing
+  - Color intensity visualization:
+    * Map completion levels to colors
+    * Support category-specific gradients
+    * Handle empty states
+  - Tap gesture for daily details
+  - Accessibility labels for screen readers
+
+- B-016: **Year View Implementation**
+  - 52-week × 7-day grid layout
+  - Compressed vertical scrolling
+  - Week separators
+  - Month labels
+  - Performance optimization for 365+ squares
+  - Pattern recognition visualization
+
+- B-017: **Month View Implementation**
+  - Calendar grid layout (7×5)
+  - Current month highlighting
+  - Day number labels
+  - Larger squares than year view
+  - Previous/next month navigation
+  - Weekend highlighting
+
+- B-018: **Week View Implementation**
+  - 7-day detailed layout
+  - Large squares with details
+  - Daily completion notes
+  - Goal progress indicators
+  - Day labels and headers
+  - Quick edit functionality
+
+- B-019: **Habit Progress Cards**
+  - Create HabitProgressCardView
+  - Integrate heatmap into card
+  - Show habit icon and name
+  - Display goal description
+  - Completion percentage (large, right-aligned)
+  - Category color coding
+  - Tap for detailed breakdown
+
+### Phase 5: Skill Management
+- B-020: **Comprehensive Skill Input**
+  - Design skill creation screen
+  - Category selection with color preview
+  - Frequency options with visual picker
+  - Time frame setting (date pickers)
+  - Icon selection gallery
+  - Color gradient customization
+  - Live card preview
+  - Rollover option toggle
+
+- B-021: **Skill Management System**
+  - Edit existing skills functionality
+  - Delete skills with confirmation
+    - Adjust skill parameters
+  - Enable/disable skills
+  - Reorder skills (drag and drop)
+  - Archive completed skills
+
+- B-022: **Category Management**
+  - Predefined categories with gradients:
+    * Personal Development (Purple #B57FFF to #9966E6)
+    * Fitness (Green #4CAF50 to #388E3C)
+    * Learning (Orange #FF9800 to #E68900)
+    * Health (Teal #40C4C4 to #2FA6A6)
+    * Mindfulness (Blue #4D99FF to #3377DD)
+    * Creative (Pink #E91E63 to #C2185B)
+    * Nutrition (Red #FF5252 to #DD3333)
+    * Hydration (Light Blue #42A5F5 to #1E88E5)
+    * Custom categories (user-defined)
+  - Category creation interface
+  - Color gradient editor
+  - Icon selection per category
+  - Group skills by categories on home screen
+  - Allow users to create unlimited custom categories
+  - Category reordering and archiving
+
+### Phase 6: Advanced Features
+- B-023: **Task Rollover Mechanism**
+  - Add rollover property to Habit model
+  - Rollover tracking in AppState
+  - Process rollovers on app start
+  - Visual rollover indicator (arrow)
+  - Rollover button on cards
   - Automatic cleanup of old rollovers
 
-- B-014: Partial Completion Tracking
-  - Update DailyCompletion model to include CompletionLevel enum:
-    * .none: No completion
-    * .partial: Partial completion (light color)
-    * .full: Full completion (dark color)
-  - Update task cards to show partial completion state
-  - Add partial completion toggle button
-  - Update progress views to display partial completions
+- B-024: **Partial Completion Tracking**
+  - Update DailyCompletion model
+  - CompletionLevel enum implementation
+  - Partial completion toggle UI
+  - Progress bar for partial states
   - Color coding in all views:
-    * Light colors for partial
-    * Dark colors for full
-    * Gray for none
+    * Light: Partial
+    * Dark: Full
+    * Empty: None
+  - Statistics with partial counts
 
-- B-015: Memorable Moments Feature
-  - Create MemorableMoment model with:
-    * Title and description
-    * Date
-    * Category (Achievement, Milestone, Breakthrough, Personal)
-    * Optional skill association
-  - Add memorable moments storage in AppState
-  - Create UI for adding/viewing moments
-  - Integrate with progress tracking views
-  - Allow filtering by date range and category
+- B-025: **Memorable Moments Feature**
+  - Create MemorableMoment model
+  - Categories (Achievement, Milestone, etc.)
+  - Add moments UI from progress screens
+  - Moments gallery view
+  - Date and skill association
+  - Filtering and search
+  - Integration with progress tracking
 
-## New Feature Details
+- B-026: **Skill Time Frame Management**
+  - Set skill duration (30-day challenge, etc.)
+  - Automatic archiving on completion
+  - Skill review reminders
+  - Progress notifications
+  - Time-limited vs ongoing tracking
 
-### Skill Input Screen Enhancements
-- Category Selection Options:
-  1. Personal Development
-  2. Fitness
-  3. Learning
-  4. Professional Growth
-  5. Health
-  6. Creative Skills
-  7. Mindfulness
-  8. Custom Category
-- Rollover Option: Toggle to allow tasks to rollover to next day if incomplete
+### Phase 7: Data and Settings
+- B-027: **Data Persistence**
+  - Core Data/SwiftData setup
+  - Save all habit data
+  - Track historical performance
+  - Morning routine completions
+  - Rolled over tasks
+  - Memorable moments
+  - Streak data
+  - User preferences
 
-### Progress Tracking Screen Specifics
-- Git-style heatmap grid showing:
-  - Daily/weekly/monthly/yearly completion
-  - Color intensity representing completion level:
-    * Light colors: Partial completion
-    * Dark colors: Full completion
-    * Gray: No completion
-  - Percentage completion for each skill
-  - Ability to tap into detailed skill history
-  - Week, Month, and Year view options
+- B-028: **Settings Implementation**
+  - User preferences interface
+  - Theme selection (Light/Dark/Auto)
+  - Notification settings
+  - Data backup/restore
+  - Export to JSON/CSV
+  - Import from backup
+  - Category management access
+  - About/credits section
 
-### Interactive Calendar Features
-- Rolling week calendar on home screen
-- Purple/blue color scheme:
-  * Primary purple: #9966E6
-  * Secondary blue: #4D99FF
-  * Accent purple: #B380FF
-- Interactive date selection
-- Week navigation (previous/next buttons)
-- Current day highlighting
-- Responsive design for all screen sizes
+- B-029: **Advanced Analytics**
+  - Detailed statistics per habit
+  - Improvement trends
+  - Best/worst day analysis
+  - Time of day patterns
+  - Category performance
+  - Weekly/monthly summaries
+  - Goal achievement rates
 
-### Morning Routine Habits
-- Four specific habits:
-  1. Read 10 pages (purple icon, book.fill)
-  2. Stretch (blue icon, figure.flexibility)
-  3. Track weight (indigo icon, scalemass)
-  4. Drink 500ml water (cyan icon, drop.fill)
-- Partial and full completion tracking
-- Visual progress indicators
-- Daily reset functionality
+### Phase 8: Polish and Optimization
+- B-030: **Animations and Transitions**
+  - Card appearance animations
+  - Checkmark completion animation
+  - Streak milestone celebrations
+  - Tab switching transitions
+  - Expand/collapse animations
+  - Loading states
+  - Smooth 60fps throughout
 
-### Task Rollover Mechanism
-- Tasks can be marked for rollover
-- Visual indicator (arrow icon) on rolled over tasks
-- Automatic processing on app start
-- Rolled over tasks appear in next day's task list
-- Can be enabled per skill
+- B-031: **Accessibility Features**
+  - VoiceOver support for all elements
+  - Dynamic Type implementation
+  - High contrast mode
+  - Reduce motion support
+  - Color blind friendly alternatives
+  - Haptic feedback
 
-### Partial Completion Tracking
-- Three completion levels:
-  - None: No progress (gray)
-  - Partial: Some progress (light color)
-  - Full: Complete (dark color)
-- Visual indicators in all views
-- Progress bars show partial completion
-- Statistics include partial completion counts
+- B-032: **Performance Optimization**
+  - Lazy loading for large datasets
+  - Efficient grid rendering
+  - Image caching
+  - Background data processing
+  - Memory management
+  - Battery optimization
 
-### Memorable Moments
-- Record special achievements and milestones
-- Categories:
-  - Achievement: Completed goals
-  - Milestone: Significant progress markers
-  - Breakthrough: Major learning moments
-  - Personal: Personal reflections
-- Date tracking and descriptions
-- Optional skill association
-- Viewable in progress screens
+- B-033: **Testing and Refinement**
+  - Unit tests for data models
+  - UI tests for critical paths
+  - Performance testing
+  - Accessibility audit
+  - User testing feedback
+  - Bug fixes and polish
 
-### Time-Based Greeting Examples
-- 5:00 AM - 11:59 AM: "Good Morning"
-- 12:00 PM - 5:59 PM: "Good Afternoon"
-- 6:00 PM - 4:59 AM: "Good Evening"
-- Motivational messages change based on time of day
+## 9. Technical Architecture
 
-### Skill Time Frame Options
-- Fixed duration skills (e.g., 30-day challenge)
-- Recurring skills (daily/weekly/monthly)
-- Open-ended skills
-- Automatic skill archiving
-- Skill review reminders
+### SwiftUI Components Structure
+```
+Views/
+├── ContentView.swift (Main container)
+├── Home/
+│   ├── HomeView.swift
+│   ├── InteractiveCalendarView.swift
+│   ├── HabitCardView.swift
+│   ├── CategorySectionView.swift
+│   └── StreakIndicatorView.swift
+├── Progress/
+│   ├── HabitReportsView.swift
+│   ├── HeatmapGridView.swift
+│   ├── YearView.swift
+│   ├── MonthView.swift
+│   ├── WeekView.swift
+│   └── HabitProgressCardView.swift
+├── AddSkill/
+│   ├── AddSkillView.swift
+│   ├── CategoryPickerView.swift
+│   ├── IconPickerView.swift
+│   └── ColorGradientPicker.swift
+└── Settings/
+    └── SettingsView.swift
 
-### Design Aesthetic
-- Clean, minimalist design
-- Purple/blue color palette throughout
-- Responsive layout for all device sizes
-- Consistent spacing and typography
-- Subtle shadows and rounded corners
-- Smooth animations and transitions
+Models/
+├── Habit.swift
+├── DailyCompletion.swift
+├── Category.swift
+├── Streak.swift
+├── MemorableMoment.swift
+└── UserPreferences.swift
+
+ViewModels/
+└── AppState.swift
+
+Utilities/
+├── ColorPalette.swift
+├── DateHelper.swift
+├── StreakCalculator.swift
+└── CompletionTracker.swift
+```
+
+### Design System
+**Typography:**
+- Headers: SF Pro Display, Bold, 24-28pt
+- Body: SF Pro Text, Regular, 16-17pt
+- Captions: SF Pro Text, Medium, 13-14pt
+
+**Spacing:**
+- Card padding: 16px
+- Section spacing: 24px
+- Element spacing: 8-12px
+- Screen margins: 16-20px
+
+**Corner Radius:**
+- Cards: 12-15px
+- Buttons: 8-10px
+- Small elements: 6px
+
+**Shadows:**
+- Card shadow: 0 2px 8px rgba(0,0,0,0.1)
+- Active shadow: 0 4px 12px rgba(0,0,0,0.15)
+
+## 10. Priority Implementation Order
+1. **Phase 1-2**: Core infrastructure and UI foundation (Weeks 1-2)
+2. **Phase 3**: Home screen with basic functionality (Weeks 3-4)
+3. **Phase 4**: Progress tracking screen (Weeks 5-6)
+4. **Phase 5**: Skill management (Week 7)
+5. **Phase 6**: Advanced features (Weeks 8-9)
+6. **Phase 7**: Data and settings (Week 10)
+7. **Phase 8**: Polish and optimization (Weeks 11-12)
+
+## 11. Success Metrics
+- User engagement: Daily active usage
+- Completion rates: % of tasks completed
+- Retention: Users returning after 7/30 days
+- Streak longevity: Average streak length
+- Feature usage: Most used features
+- User satisfaction: App store ratings
+
+## 12. Future Enhancements (Post-Launch)
+- Social features (share progress)
+- Habit suggestions based on AI
+- Apple Watch companion app
+- Widgets for iOS home screen
+- Siri shortcuts integration
+- iCloud sync across devices
+- Premium features (advanced analytics)
+- Custom themes and icon packs

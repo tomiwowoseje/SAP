@@ -17,8 +17,10 @@ class AppState {
     private let customCategoriesKey = "sap.customCategories"
     private let completedIdsKey = "sap.completedTaskIds"
     private let morningRoutineKey = "sap.morningRoutineCompletions"
+    private let morningHabitsKey = "sap.morningHabits"
     private let memorableMomentsKey = "sap.memorableMoments"
     private let rolledOverTasksKey = "sap.rolledOverTasks"
+    private let weightEntriesKey = "sap.weightEntries"
     
     // MARK: - Persisted state
     var skills: [Skill] = [
@@ -46,6 +48,20 @@ class AppState {
         didSet { saveMorningRoutineCompletions() }
     }
     
+    // Morning routine habits
+    var morningHabits: [MorningHabit] = [
+        MorningHabit(id: UUID(), name: "Read 10 pages", icon: "book.fill", color: .purple, goal: "10 pages", order: 0),
+        MorningHabit(id: UUID(), name: "Stretch", icon: "figure.flexibility", color: .blue, goal: "5 min", order: 1),
+        MorningHabit(id: UUID(), name: "Track weight", icon: "scalemass", color: .indigo, goal: "", order: 2),
+        MorningHabit(id: UUID(), name: "Drink 500ml water", icon: "drop.fill", color: .cyan, goal: "500ml", order: 3)
+    ] {
+        didSet { 
+            // Ensure habits are sorted by order
+            morningHabits.sort { $0.order < $1.order }
+            saveMorningHabits() 
+        }
+    }
+    
     // Memorable moments
     var memorableMoments: [MemorableMoment] = [] {
         didSet { saveMemorableMoments() }
@@ -54,6 +70,11 @@ class AppState {
     // Rolled over tasks [skillId: Date] - tasks that need to be shown on next day
     var rolledOverTasks: [UUID: Date] = [:] {
         didSet { saveRolledOverTasks() }
+    }
+    
+    // Weight entries for tracking weight over time
+    var weightEntries: [WeightEntry] = [] {
+        didSet { saveWeightEntries() }
     }
     
     // Get all categories (predefined + custom)
@@ -109,6 +130,11 @@ class AppState {
             morningRoutineCompletions = decoded
         }
         
+        if let data = defaults.data(forKey: morningHabitsKey),
+           let decoded = try? decoder.decode([MorningHabit].self, from: data) {
+            morningHabits = decoded
+        }
+        
         if let data = defaults.data(forKey: memorableMomentsKey),
            let decoded = try? JSONDecoder().decode([MemorableMoment].self, from: data) {
             memorableMoments = decoded
@@ -118,6 +144,11 @@ class AppState {
            let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
             // Convert [String: Date] to [UUID: Date]
             rolledOverTasks = decoded.compactMapKeys { UUID(uuidString: $0) }
+        }
+        
+        if let data = defaults.data(forKey: weightEntriesKey),
+           let decoded = try? JSONDecoder().decode([WeightEntry].self, from: data) {
+            weightEntries = decoded
         }
         
         // Process rolled over tasks on app start
@@ -160,6 +191,13 @@ class AppState {
         }
     }
     
+    private func saveMorningHabits() {
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(morningHabits) {
+            UserDefaults.standard.set(data, forKey: morningHabitsKey)
+        }
+    }
+    
     private func saveMemorableMoments() {
         let encoder = JSONEncoder()
         if let data = try? encoder.encode(memorableMoments) {
@@ -174,6 +212,57 @@ class AppState {
         if let data = try? encoder.encode(stringDict) {
             UserDefaults.standard.set(data, forKey: rolledOverTasksKey)
         }
+    }
+    
+    private func saveWeightEntries() {
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(weightEntries) {
+            UserDefaults.standard.set(data, forKey: weightEntriesKey)
+        }
+    }
+    
+    // Add or update weight entry for a date
+    func addWeightEntry(weight: Double, for date: Date = Date()) {
+        let targetDate = Calendar.current.startOfDay(for: date)
+        
+        // Remove existing entry for this date
+        weightEntries.removeAll { entry in
+            Calendar.current.isDate(entry.date, inSameDayAs: targetDate)
+        }
+        
+        // Add new entry
+        let entry = WeightEntry(date: targetDate, weight: weight)
+        weightEntries.append(entry)
+        
+        // Sort by date
+        weightEntries.sort { $0.date < $1.date }
+    }
+    
+    // Get weight for a specific date
+    func getWeight(for date: Date) -> Double? {
+        let targetDate = Calendar.current.startOfDay(for: date)
+        return weightEntries.first { entry in
+            Calendar.current.isDate(entry.date, inSameDayAs: targetDate)
+        }?.weight
+    }
+    
+    // Clean up weight entries - remove unrealistic or outdated entries
+    func cleanupWeightEntries() {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Remove entries that are:
+        // 1. More than 2 years old
+        // 2. Unrealistic weights (< 20 kg or > 300 kg)
+        weightEntries.removeAll { entry in
+            let age = calendar.dateComponents([.year], from: entry.date, to: now).year ?? 0
+            return age > 2 || entry.weight < 20 || entry.weight > 300
+        }
+        
+        // Sort by date
+        weightEntries.sort { $0.date < $1.date }
+        
+        saveWeightEntries()
     }
     
     // Track completion for today
@@ -202,7 +291,7 @@ class AppState {
             let existingCompletion = dailyCompletions.first { completion in
                 completion.skillId == skill.id && Calendar.current.isDate(completion.date, inSameDayAs: today)
             }
-            let completionLevel = existingCompletion?.completionLevel ?? (isCompleted ? .full : .none)
+            let completionLevel: CompletionLevel = existingCompletion?.completionLevel ?? (isCompleted ? .full : .none)
             
             let completion = DailyCompletion(
                 skillId: skill.id,
@@ -336,6 +425,7 @@ class AppState {
         let morningRoutineCompletions: [String: CompletionLevel]
         let memorableMoments: [MemorableMoment]
         let rolledOverTasks: [String: Date]
+        let weightEntries: [WeightEntry]
     }
     
     func exportData() -> String? {
@@ -346,7 +436,8 @@ class AppState {
             customCategories: customCategories,
             morningRoutineCompletions: morningRoutineCompletions,
             memorableMoments: memorableMoments,
-            rolledOverTasks: stringDict
+            rolledOverTasks: stringDict,
+            weightEntries: weightEntries
         )
         
         let encoder = JSONEncoder()
@@ -369,6 +460,7 @@ class AppState {
         customCategories = payload.customCategories
         morningRoutineCompletions = payload.morningRoutineCompletions
         memorableMoments = payload.memorableMoments
+        weightEntries = payload.weightEntries
         
         // Convert [String: Date] back to [UUID: Date]
         rolledOverTasks = payload.rolledOverTasks.compactMapKeys { UUID(uuidString: $0) }
